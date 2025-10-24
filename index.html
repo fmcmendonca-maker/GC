@@ -3,32 +3,31 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Flight Distance, Time & Block Time Calculator</title>
+<title>Multi-Leg Flight Calculator</title>
 <style>
   body { font-family: Arial, sans-serif; margin: 20px; }
   label { display: block; margin: 10px 0 5px; }
-  input { padding: 8px; width: 100%; max-width: 300px; }
+  input { padding: 8px; width: 100%; max-width: 400px; }
   button { padding: 10px 15px; margin-top: 10px; }
-  .result { margin-top: 20px; padding: 15px; border: 1px solid #ccc; max-width: 600px; white-space: pre-wrap; }
+  table { margin-top: 20px; border-collapse: collapse; width: 100%; max-width: 800px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  th { background-color: #f5f5f5; }
   .warning { color: red; font-weight: bold; }
 </style>
 </head>
 <body>
 
-<h1>Flight Distance, Time & Block Time Calculator</h1>
+<h1>Multi-Leg Flight Distance & Time Calculator</h1>
 
-<label for="origin">Origin IATA Code:</label>
-<input type="text" id="origin" maxlength="3" placeholder="e.g. JFK" />
-
-<label for="destination">Destination IATA Code:</label>
-<input type="text" id="destination" maxlength="3" placeholder="e.g. LHR" />
+<label for="route">Route (e.g. JFK-ORD-LAX-MEX):</label>
+<input type="text" id="route" placeholder="Enter multi-leg route, e.g. JFK-ORD-LAX-MEX" />
 
 <label for="aircraft">Aircraft Code (e.g. B738, A320):</label>
 <input type="text" id="aircraft" maxlength="5" placeholder="e.g. B738" />
 
 <button onclick="calculateFlight()">Calculate</button>
 
-<div id="result" class="result" style="display:none;"></div>
+<div id="result"></div>
 
 <script>
 const aircraftInfo = {
@@ -64,8 +63,7 @@ const aircraftInfo = {
   E190: { model: "Embraer E190", speed: 460, maxRangeNM: 2400 }
 };
 
-// Typical fixed block time additions for taxi and ground ops (minutes)
-const fixedBlockMinutes = 30;  // 15 min taxi-out + 15 min taxi-in typical
+const fixedBlockMinutes = 30; // 15 min taxi-out + 15 min taxi-in
 
 function formatFlightTime(hours) {
   const h = Math.floor(hours);
@@ -88,58 +86,87 @@ async function fetchDistance(origin, destination, token) {
 }
 
 async function calculateFlight() {
-  const origin = document.getElementById('origin').value.trim().toUpperCase();
-  const destination = document.getElementById('destination').value.trim().toUpperCase();
+  const routeInput = document.getElementById('route').value.trim().toUpperCase();
   const aircraftCode = document.getElementById('aircraft').value.trim().toUpperCase();
-  const token = '4qMWUC5HS9Fsn1vBv9xkzz6g'; // Replace with your API token
+  const token = 'iHPosKuEeLi2rJHtUNxNJtKo'; // Replace with your API token
 
-  if (origin.length !== 3 || destination.length !== 3) {
-    alert('Please enter valid 3-letter IATA codes for both origin and destination.');
-    return;
-  }
-  if (!aircraftCode) {
+  if (!aircraftCode || !(aircraftCode in aircraftInfo)) {
     alert('Please enter a valid aircraft code.');
     return;
   }
-  if (!(aircraftCode in aircraftInfo)) {
-    alert('Unknown aircraft code. Please enter a valid commercial aircraft code.');
+
+  const airports = routeInput.split('-');
+  if (airports.length < 2) {
+    alert('Please enter at least two airports in the route separated by hyphens, e.g. JFK-ORD-LAX');
     return;
   }
-
-  try {
-    const data = await fetchDistance(origin, destination, token);
-    const attrs = data.data.attributes;
-    const nm = attrs.nautical_miles;
-    const aircraft = aircraftInfo[aircraftCode];
-    const cruiseTime = nm / aircraft.speed; // in hours
-    const blockTime = cruiseTime + fixedBlockMinutes / 60; // add block time in hours
-
-    let message = `Flight Information
---------------------------
-From: ${attrs.from_airport.name} (${attrs.from_airport.iata}/${attrs.from_airport.icao}), ${attrs.from_airport.city}, ${attrs.from_airport.country}, ${attrs.from_airport.continent}
-To: ${attrs.to_airport.name} (${attrs.to_airport.iata}/${attrs.to_airport.icao}), ${attrs.to_airport.city}, ${attrs.to_airport.country}, ${attrs.to_airport.continent}
-
-Distance: ${nm.toFixed(2)} nautical miles
-
-Estimated Flight Time (cruise): ${formatFlightTime(cruiseTime)}
-Estimated Block Time (incl. taxi & ground ops): ${formatFlightTime(blockTime)}
-
-Aircraft: ${aircraft.model} (${aircraftCode})
-
-`;
-
-    if (nm > aircraft.maxRangeNM) {
-      message += "\nWarning: This aircraft is not capable of flying this distance non-stop. Please choose a different aircraft or consider a stopover.";
+  for (let code of airports) {
+    if (code.length !== 3) {
+      alert('Each airport must be a 3-letter IATA code.');
+      return;
     }
-
-    const resultDiv = document.getElementById('result');
-    resultDiv.textContent = message;
-    resultDiv.style.display = 'block';
-
-  } catch (error) {
-    alert('Error fetching data: ' + error.message);
-    console.error(error);
   }
+
+  const aircraft = aircraftInfo[aircraftCode];
+  let resultHTML = '';
+  let totalNM = 0;
+  let totalFlightTime = 0;
+  let totalBlockTime = 0;
+  let warningFlag = false;
+
+  resultHTML += `<table>
+  <thead>
+    <tr>
+      <th>From</th><th>To</th><th>NM</th><th>Flight Time</th><th>Block Time</th><th>Airport Origin</th><th>Airport Destination</th>
+    </tr>
+  </thead><tbody>`;
+
+  for (let i=0; i<airports.length-1; i++) {
+    let fromCode = airports[i];
+    let toCode = airports[i+1];
+
+    try {
+      const data = await fetchDistance(fromCode, toCode, token);
+      const attr = data.data.attributes;
+      const nm = attr.nautical_miles;
+      const flightTimeHrs = nm / aircraft.speed;
+      const blockTimeHrs = flightTimeHrs + fixedBlockMinutes / 60;
+
+      totalNM += nm;
+      totalFlightTime += flightTimeHrs;
+      totalBlockTime += blockTimeHrs;
+
+      let warningMsg = '';
+      if (nm > aircraft.maxRangeNM) {
+        warningMsg = `<span class="warning"> &nbsp;⚠ Aircraft cannot fly this leg nonstop</span>`;
+        warningFlag = true;
+      }
+
+      resultHTML += `<tr>
+        <td>${fromCode}</td>
+        <td>${toCode}</td>
+        <td>${nm.toFixed(2)}</td>
+        <td>${formatFlightTime(flightTimeHrs)}</td>
+        <td>${formatFlightTime(blockTimeHrs)}</td>
+        <td>${attr.from_airport.name}, ${attr.from_airport.city}</td>
+        <td>${attr.to_airport.name}, ${attr.to_airport.city}</td>
+      </tr>`;
+    } catch (error) {
+      alert('Error fetching data for leg ' + fromCode + ' to ' + toCode + ': ' + error.message);
+      return;
+    }
+  }
+  resultHTML += `</tbody></table>`;
+
+  resultHTML += `<p><strong>Total Distance:</strong> ${totalNM.toFixed(2)} NM</p>`;
+  resultHTML += `<p><strong>Total Estimated Flight Time (cruise):</strong> ${formatFlightTime(totalFlightTime)}</p>`;
+  resultHTML += `<p><strong>Total Estimated Block Time (incl. taxi & ground ops):</strong> ${formatFlightTime(totalBlockTime)}</p>`;
+
+  if (warningFlag) {
+    resultHTML += `<p class="warning">One or more legs exceed the maximum range of the aircraft. Please choose another aircraft or plan stopovers.</p>`;
+  }
+
+  document.getElementById('result').innerHTML = resultHTML;
 }
 </script>
 
