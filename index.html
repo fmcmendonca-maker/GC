@@ -246,6 +246,10 @@
     resultHTML += `<p><strong>Total Fuel Burn:</strong> ${totalFuelBurn.toFixed(0)} kg</p>`;
     resultHTML += `<p><strong>Total Fuel Cost (USD):</strong> ${totalFuelCost.toFixed(2)}</p>`;
     resultHTML += `<p><strong>Total ACMI Cost (USD):</strong> ${totalAcmiCost.toFixed(2)}</p>`;
+    resultHTML += `<p><strong>ACMI Cost (USD):</strong> ${acmiRate.toFixed(2)}</p>`;
+    resultHTML += `<p><strong>Ver 3.4 </p>`;
+
+
 
     if (warningFlag) {
       resultHTML += `<p class="warning">One or more legs exceed max range of aircraft! Please choose another aircraft or add stops.</p>`;
