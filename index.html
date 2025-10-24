@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Multi-Leg Flight Cost Calculator with Aircraft Code Validation</title>
+<title>Multi-Leg Flight Cost Calculator with Device Detection</title>
 <style>
   body { font-family: Arial, sans-serif; margin: 20px; }
-  label { display: block; margin: 10px 0 5px;}
+  label { display: block; margin: 10px 0 5px; }
   input { padding: 8px; width: 100%; max-width: 400px; }
   button { padding: 10px 15px; margin-top: 10px; }
   table { margin-top: 20px; border-collapse: collapse; width: 100%; max-width: 1200px; }
@@ -15,9 +15,25 @@
   .warning { color: red; font-weight: bold; }
   #map { height: 400px; max-width: 900px; margin-top: 20px; }
   #footer { margin-top: 30px; font-size: 0.9em; color: #666; text-align: center; }
-  #fuelPriceContainer, #acmiRateContainer { display: none; margin-top: 10px; }
-  #infoBasePrice, #infoBaseAcmi { font-size: 0.9em; color: #333; margin-top: 8px; }
-  #toggleFuelPriceBtn, #toggleAcmiRateBtn { margin-left: 5px; font-size: 0.8em; cursor: pointer; color: blue; text-decoration: underline; }
+
+  /* Styles for mobile devices */
+  body.mobile {
+    font-size: 1.2em;
+  }
+  body.mobile input, body.mobile button {
+    font-size: 1.1em;
+  }
+  body.mobile table {
+    font-size: 0.9em;
+  }
+
+  /* Example adjustments for Ubuntu/Linux vs Windows */
+  body.linux {
+    background-color: #f0f8ff;
+  }
+  body.windows {
+    background-color: #fffafa;
+  }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
@@ -31,7 +47,7 @@
 <label for="aircraft">Aircraft Code (e.g. B738, A320):</label>
 <input type="text" id="aircraft" maxlength="5" placeholder="e.g. B738" />
 
-<div id="fuelPriceContainer">
+<div id="fuelPriceContainer" style="display:none;">
   <label for="fuelPrice">Fuel Price (per kg):</label>
   <input type="number" id="fuelPrice" step="0.01" />
 </div>
@@ -40,7 +56,7 @@
   <span id="toggleFuelPriceBtn" onclick="toggleFuelInput()">Change</span>
 </div>
 
-<div id="acmiRateContainer">
+<div id="acmiRateContainer" style="display:none;">
   <label for="acmiRate">ACMI Hourly Rate (USD):</label>
   <input type="number" id="acmiRate" step="10" />
 </div>
@@ -62,9 +78,34 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
+  // Device and OS detection
+  function detectDeviceType() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+
+    if (/iPad/.test(ua)) return 'ipad';
+    if (/iPhone/.test(ua)) return 'iphone';
+    if (/Android/.test(ua)) return 'android';
+    if (/Windows NT/.test(ua)) return 'windows';
+    if (/Linux/.test(ua)) { // Linux includes Ubuntu
+      return 'linux';
+    }
+    if (/Macintosh/.test(ua) || /Mac OS X/.test(ua)) return 'mac';
+    return 'desktop';
+  }
+
+  const deviceType = detectDeviceType();
+
+  // Add CSS classes to body for device and OS
+  document.body.classList.add(deviceType);
+
+  // Basic separation of mobile vs desktop for UI adjustments
+  if(deviceType === 'iphone' || deviceType === 'ipad' || deviceType === 'android') {
+    document.body.classList.add('mobile');
+  }
+
+  // Flight calculator variables and functions
   let aircraftInfo = {};
 
-  // Load external aircraft data JSON at startup
   fetch('aircraftData.json')
     .then(response => response.json())
     .then(data => {
@@ -113,7 +154,6 @@
   }
 
   function isValidAircraftCode(code) {
-    // ICAO code: 3 or 4 uppercase alphanumeric chars
     const regex = /^[A-Z0-9]{3,4}$/;
     return regex.test(code);
   }
@@ -172,7 +212,7 @@
       }
     }
 
-    const token = 'EuqeSCWMpFoTdcXLemqLTtA7';  // Replace this with your real API token
+    const token = '<YOUR_AIRPORT_GAP_API_TOKEN>';  // Replace this with your real API token
 
     const airports = routeInput.split('-');
     if (airports.length < 2) {
@@ -246,10 +286,6 @@
     resultHTML += `<p><strong>Total Fuel Burn:</strong> ${totalFuelBurn.toFixed(0)} kg</p>`;
     resultHTML += `<p><strong>Total Fuel Cost (USD):</strong> ${totalFuelCost.toFixed(2)}</p>`;
     resultHTML += `<p><strong>Total ACMI Cost (USD):</strong> ${totalAcmiCost.toFixed(2)}</p>`;
-    resultHTML += `<p><strong>ACMI Cost (USD):</strong> ${acmiRate.toFixed(2)}</p>`;
-    resultHTML += `<p><strong>Ver 3.4 </p>`;
-
-
 
     if (warningFlag) {
       resultHTML += `<p class="warning">One or more legs exceed max range of aircraft! Please choose another aircraft or add stops.</p>`;
