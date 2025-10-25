@@ -3,57 +3,40 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Multi-Leg Flight Cost Calculator with Device Detection</title>
+<title>Flight Cost Calculator with Tables</title>
 <style>
   body { font-family: Arial, sans-serif; margin: 20px; }
   label { display: block; margin: 10px 0 5px; }
-  input { padding: 8px; width: 100%; max-width: 400px; }
+  input, select { padding: 8px; width: 100%; max-width: 400px; }
   button { padding: 10px 15px; margin-top: 10px; }
-  table { margin-top: 20px; border-collapse: collapse; width: 100%; max-width: 1200px; }
+  table { margin-top: 10px; border-collapse: collapse; width: 100%; max-width: 1200px; }
   th, td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: nowrap; }
   th { background-color: #f5f5f5; }
   .warning { color: red; font-weight: bold; }
   #map { height: 400px; max-width: 900px; margin-top: 20px; }
   #footer { margin-top: 30px; font-size: 0.9em; color: #666; text-align: center; }
-
-  /* Styles for mobile devices */
-  body.mobile {
-    font-size: 1.2em;
-  }
-  body.mobile input, body.mobile button {
-    font-size: 1.1em;
-  }
-  body.mobile table {
-    font-size: 0.9em;
-  }
-
-  /* Example adjustments for Ubuntu/Linux vs Windows */
-  body.linux {
-    background-color: #f0f8ff;
-  }
-  body.windows {
-    background-color: #fffafa;
-  }
+  h2 { margin-top: 30px; }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
 
-<h1>Multi-Leg Flight Distance, Time & Cost Calculator</h1>
+<h1>Multi-Leg Flight Distance & Cost Calculator</h1>
 
-<label for="route">Route (e.g. JFK-ORD-LAX-MEX):</label>
-<input type="text" id="route" placeholder="Enter multi-leg route, e.g. JFK-ORD-LAX-MEX" />
+<label for="route">V11 Route (e.g. JFK-ORD-LAX):</label>
+<input type="text" id="route" placeholder="Enter multi-leg route, e.g., FRA-LIS-MAD" />
 
 <label for="aircraft">Aircraft Code (e.g. B738, A320):</label>
 <input type="text" id="aircraft" maxlength="5" placeholder="e.g. B738" />
 
 <div id="fuelPriceContainer" style="display:none;">
-  <label for="fuelPrice">Fuel Price (per kg):</label>
-  <input type="number" id="fuelPrice" step="0.01" />
+  <label for="fuelPrice">Fuel Price (USD/kg):</label>
+  <input type="number" id="fuelPrice" step="0.01" value="1.07" />
 </div>
 <div id="infoBasePrice">
-  Using base fuel price <strong>$1.07 USD/kg</strong> from <a href="https://www.iata.org/en/publications/economics/fuel-monitor/" target="_blank" rel="noopener">IATA Jet Fuel Price Monitor</a> (Oct 2025).
-  <span id="toggleFuelPriceBtn" onclick="toggleFuelInput()">Change</span>
+  Using base fuel price <strong>$1.07 USD/kg</strong> from 
+  <a href="https://www.iata.org/en/publications/economics/fuel-monitor/" target="_blank" rel="noopener">IATA Jet Fuel Price Monitor</a> (Oct 2025).
+  <span id="toggleFuelPriceBtn" onclick="toggleFuelInput()" style="color:blue; cursor:pointer;">Change</span>
 </div>
 
 <div id="acmiRateContainer" style="display:none;">
@@ -62,64 +45,38 @@
 </div>
 <div id="infoBaseAcmi">
   Using default ACMI hourly rates by aircraft type (editable).
-  <span id="toggleAcmiRateBtn" onclick="toggleAcmiInput()">Change</span>
+  <span id="toggleAcmiRateBtn" onclick="toggleAcmiInput()" style="color:blue; cursor:pointer;">Change</span>
 </div>
+
+<label for="navRate">Air Navigation Fee Rate (USD/NM):</label>
+<input type="number" id="navRate" step="0.1" value="4.0" />
 
 <button id="calculateBtn" onclick="calculateFlight()">Calculate</button>
 
-<div id="result"></div>
+<div id="flightData"></div>
+<div id="costData"></div>
+<div id="airportData"></div>
 
 <div id="map"></div>
 
-<button id="queryAgainBtn" onclick="resetApp()" style="display:none; margin-top: 20px;">Query Again</button>
+<button id="queryAgainBtn" onclick="location.reload()" style="display:none; margin-top: 20px;">Query Again</button>
 
-<div id="footer">© Aerohub</div>
+<div id="footer">© Aerohub   Version 4.01   Oct2025 NavCharges V1</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  // Device and OS detection
-  function detectDeviceType() {
-    const ua = navigator.userAgent || navigator.vendor || window.opera;
-
-    if (/iPad/.test(ua)) return 'ipad';
-    if (/iPhone/.test(ua)) return 'iphone';
-    if (/Android/.test(ua)) return 'android';
-    if (/Windows NT/.test(ua)) return 'windows';
-    if (/Linux/.test(ua)) { // Linux includes Ubuntu
-      return 'linux';
-    }
-    if (/Macintosh/.test(ua) || /Mac OS X/.test(ua)) return 'mac';
-    return 'desktop';
-  }
-
-  const deviceType = detectDeviceType();
-
-  // Add CSS classes to body for device and OS
-  document.body.classList.add(deviceType);
-
-  // Basic separation of mobile vs desktop for UI adjustments
-  if(deviceType === 'iphone' || deviceType === 'ipad' || deviceType === 'android') {
-    document.body.classList.add('mobile');
-  }
-
-  // Flight calculator variables and functions
   let aircraftInfo = {};
 
   fetch('aircraftData.json')
     .then(response => response.json())
-    .then(data => {
-      aircraftInfo = data.aircraft;
-      console.log("Loaded aircraft data", aircraftInfo);
-    })
-    .catch(err => {
-      alert("Error loading aircraft data: " + err.message);
-    });
+    .then(data => aircraftInfo = data.aircraft)
+    .catch(err => alert("Error loading aircraft data: " + err.message));
 
   const fixedBlockMinutes = 30;
+  const baseFuelPrice = 1.07;
   let useBaseFuelPrice = true;
   let useDefaultAcmiRate = true;
-  const baseFuelPrice = 1.07;
 
   function toggleFuelInput(){
     const container = document.getElementById('fuelPriceContainer');
@@ -154,25 +111,29 @@
   }
 
   function isValidAircraftCode(code) {
-    const regex = /^[A-Z0-9]{3,4}$/;
-    return regex.test(code);
+    return /^[A-Z0-9]{3,4}$/.test(code);
   }
-
+  
   function formatFlightTime(hours) {
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
     return `${h} hr ${m} min`;
   }
 
+  function formatNumberEU(number) {
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(number);
+  }
+
   let map;
   let routeLayer;
 
-  async function fetchDistanceWithCoords(origin, destination, token) {
+  async function fetchDistanceWithCoords(origin, destination) {
+    // Replace <YOUR_API_TOKEN> with your real Airport Gap API token
     const response = await fetch('https://airportgap.com/api/airports/distance', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer token=' + token
+        'Authorization': 'Bearer token=<YOUR_API_TOKEN>'
       },
       body: JSON.stringify({ from: origin.toUpperCase(), to: destination.toUpperCase() })
     });
@@ -180,18 +141,47 @@
     return response.json();
   }
 
+  function resetApp(){
+    document.getElementById('flightData').innerHTML = '';
+    document.getElementById('costData').innerHTML = '';
+    document.getElementById('airportData').innerHTML = '';
+    if(routeLayer) routeLayer.clearLayers();
+    if(map) map.remove();
+    map = null;
+
+    document.getElementById('route').disabled = false;
+    document.getElementById('aircraft').disabled = false;
+    document.getElementById('fuelPrice').disabled = false;
+    document.getElementById('acmiRate').disabled = false;
+    document.getElementById('navRate').disabled = false;
+    document.getElementById('calculateBtn').style.display = 'inline-block';
+    document.getElementById('queryAgainBtn').style.display = 'none';
+  }
+
   async function calculateFlight() {
     const routeInput = document.getElementById('route').value.trim().toUpperCase();
     const aircraftCode = document.getElementById('aircraft').value.trim().toUpperCase();
 
     if (!isValidAircraftCode(aircraftCode)) {
-      alert('Please enter a valid aircraft code (3-4 uppercase letters/digits, e.g., B738, A320)');
+      alert('Please enter a valid aircraft code (3-4 uppercase letters/digits, e.g., B738)');
       return;
     }
 
     if (!aircraftInfo[aircraftCode]) {
-      alert('Aircraft code not found in database. Please enter a valid aircraft code present in the aircraft data.');
+      alert('Aircraft code not found in database.');
       return;
+    }
+
+    const airports = routeInput.split('-');
+    if (airports.length < 2) {
+      alert('Please enter at least two airports separated by hyphens.');
+      return;
+    }
+    for (const code of airports) {
+      if (code.length !== 3) {
+        alert('Each airport must be a 3-letter IATA code.');
+        return;
+      }
     }
 
     let fuelPricePerKg = baseFuelPrice;
@@ -203,95 +193,159 @@
       }
     }
 
-    let acmiRate = aircraftInfo[aircraftCode].acmiRate;
+    let acmiRate = aircraftInfo[aircraftCode] ? aircraftInfo[aircraftCode].acmiRate : 4000;
     if(!useDefaultAcmiRate){
       acmiRate = parseFloat(document.getElementById('acmiRate').value);
-      if(isNaN(acmiRate) || acmiRate <= 0){
+      if (isNaN(acmiRate) || acmiRate <= 0) {
         alert('Please enter a valid ACMI hourly rate.');
         return;
       }
     }
 
-    const token = '<YOUR_AIRPORT_GAP_API_TOKEN>';  // Replace this with your real API token
-
-    const airports = routeInput.split('-');
-    if (airports.length < 2) {
-      alert('Please enter at least two airports separated by hyphens, e.g., JFK-ORD-LAX.');
+    const navRate = parseFloat(document.getElementById('navRate').value);
+    if (isNaN(navRate) || navRate <= 0) {
+      alert('Please enter a valid Air Navigation Fee Rate (USD/NM).');
       return;
-    }
-    for (const code of airports) {
-      if (code.length !== 3) {
-        alert('Each airport must be a 3-letter IATA code.');
-        return;
-      }
     }
 
     const aircraft = aircraftInfo[aircraftCode];
-    let resultHTML = `<table>
-      <thead><tr><th>From</th><th>To</th><th>NM</th><th>Flight Time</th><th>Block Time</th><th>Fuel Burn (kg)</th><th>Fuel Cost (USD)</th><th>ACMI Rate (USD/BH)</th><th>ACMI Cost (USD)</th><th>City (Origin)</th><th>Country (Origin)</th><th>City (Destination)</th><th>Country (Destination)</th></tr></thead><tbody>`;
-
-    let totalNM = 0, totalFlightTime = 0, totalBlockTime = 0, totalFuelBurn = 0, totalFuelCost = 0, totalAcmiCost = 0;
-    let warningFlag = false;
-
-    if (routeLayer) routeLayer.clearLayers();
-    if (!map) {
-      map = L.map('map').setView([20, 0], 2);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(map);
+    const mtowKg = aircraft.maxTakeoffWeightKg;
+    if (typeof mtowKg !== 'number' || mtowKg <= 0) {
+      alert('Invalid MTOW set for this aircraft.');
+      return;
     }
+    const mtowTons = mtowKg / 1000;
+
+    const legsData = [];
+    let warningFlag = false;
     let latlngs = [];
 
-    for(let i=0; i< airports.length-1; i++){
-      let fromCode = airports[i];
-      let toCode = airports[i+1];
+    if(map) map.remove();
+    map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(map);
 
+    for(let i = 0; i < airports.length -1; i++) {
+      const fromCode = airports[i];
+      const toCode = airports[i+1];
       try {
-        const data = await fetchDistanceWithCoords(fromCode, toCode, token);
+        const data = await fetchDistanceWithCoords(fromCode, toCode);
         const attr = data.data.attributes;
+
         const nm = attr.nautical_miles;
         const flightTimeHrs = nm / aircraft.speed;
-        const blockTimeHrs = flightTimeHrs + fixedBlockMinutes/60;
+        const blockTimeHrs = flightTimeHrs + fixedBlockMinutes / 60;
         const fuelBurnKg = flightTimeHrs * aircraft.fuelBurnKgPerHr;
         const fuelCost = fuelBurnKg * fuelPricePerKg;
         const acmiCost = blockTimeHrs * acmiRate;
+        const navCharge = nm * Math.pow(mtowTons / 50, 0.7) * navRate;
 
-        totalNM += nm;
-        totalFlightTime += flightTimeHrs;
-        totalBlockTime += blockTimeHrs;
-        totalFuelBurn += fuelBurnKg;
-        totalFuelCost += fuelCost;
-        totalAcmiCost += acmiCost;
+        if (nm > aircraft.maxRangeNM) warningFlag = true;
 
-        if(nm > aircraft.maxRangeNM){
-          warningFlag = true;
-        }
+        legsData.push({
+          from: fromCode,
+          to: toCode,
+          distanceNM: nm,
+          flightTimeHrs,
+          blockTimeHrs,
+          fuelBurnKg,
+          fuelCost,
+          acmiCost,
+          navCharge,
+          fromCountry: attr.from_airport.country,
+          toCountry: attr.to_airport.country,
+          fromAirportName: attr.from_airport.name,
+          toAirportName: attr.to_airport.name,
+          fromAirportCity: attr.from_airport.city || '',
+          toAirportCity: attr.to_airport.city || ''
+        });
 
         latlngs.push([attr.from_airport.latitude, attr.from_airport.longitude]);
-        if(i === airports.length-2) latlngs.push([attr.to_airport.latitude, attr.to_airport.longitude]);
-
-        resultHTML += `<tr>
-          <td>${fromCode}</td><td>${toCode}</td><td>${nm.toFixed(2)}</td><td>${formatFlightTime(flightTimeHrs)}</td><td>${formatFlightTime(blockTimeHrs)}</td>
-          <td>${fuelBurnKg.toFixed(0)}</td><td>${fuelCost.toFixed(2)}</td><td>${acmiRate.toFixed(2)}</td><td>${acmiCost.toFixed(2)}</td>
-          <td>${attr.from_airport.city}</td><td>${attr.from_airport.country}</td><td>${attr.to_airport.city}</td><td>${attr.to_airport.country}</td>
-        </tr>`;
-
-      } catch(error) {
-        alert('Error fetching data for leg ' + fromCode + ' to ' + toCode + ': ' + error.message);
+        if(i === airports.length - 2) latlngs.push([attr.to_airport.latitude, attr.to_airport.longitude]);
+      } catch(e) {
+        alert(`Error fetching data for leg ${fromCode} to ${toCode}: ${e.message}`);
         return;
       }
     }
-    resultHTML += `</tbody></table>`;
-    resultHTML += `<p><strong>Total Distance:</strong> ${totalNM.toFixed(2)} NM</p>`;
-    resultHTML += `<p><strong>Total Flight Time (cruise):</strong> ${formatFlightTime(totalFlightTime)}</p>`;
-    resultHTML += `<p><strong>Total Block Time:</strong> ${formatFlightTime(totalBlockTime)}</p>`;
-    resultHTML += `<p><strong>Total Fuel Burn:</strong> ${totalFuelBurn.toFixed(0)} kg</p>`;
-    resultHTML += `<p><strong>Total Fuel Cost (USD):</strong> ${totalFuelCost.toFixed(2)}</p>`;
-    resultHTML += `<p><strong>Total ACMI Cost (USD):</strong> ${totalAcmiCost.toFixed(2)}</p>`;
 
-    if (warningFlag) {
-      resultHTML += `<p class="warning">One or more legs exceed max range of aircraft! Please choose another aircraft or add stops.</p>`;
-    }
-    document.getElementById('result').innerHTML = resultHTML;
+    const totals = {
+      distanceNM: 0, flightTimeHrs: 0, blockTimeHrs: 0,
+      fuelBurnKg: 0, fuelCostUSD: 0, acmiCostUSD: 0, navChargeUSD: 0
+    };
+    legsData.forEach(leg => {
+      totals.distanceNM += leg.distanceNM;
+      totals.flightTimeHrs += leg.flightTimeHrs;
+      totals.blockTimeHrs += leg.blockTimeHrs;
+      totals.fuelBurnKg += leg.fuelBurnKg;
+      totals.fuelCostUSD += leg.fuelCost;
+      totals.acmiCostUSD += leg.acmiCost;
+      totals.navChargeUSD += leg.navCharge;
+    });
+    const totalCost = totals.fuelCostUSD + totals.acmiCostUSD + totals.navChargeUSD;
 
+    // Flight Data Table
+    let flightTableHTML = `<h2>Flight Data</h2><table>
+      <thead><tr>
+        <th>From</th><th>To</th><th>Distance (NM)</th><th>Flight Time</th><th>Block Time</th><th>Fuel Burn (kg)</th>
+      </tr></thead><tbody>`;
+    legsData.forEach(leg => {
+      flightTableHTML += `<tr>
+        <td>${leg.from}</td>
+        <td>${leg.to}</td>
+        <td>${formatNumberEU(leg.distanceNM)}</td>
+        <td>${formatFlightTime(leg.flightTimeHrs)}</td>
+        <td>${formatFlightTime(leg.blockTimeHrs)}</td>
+        <td>${formatNumberEU(leg.fuelBurnKg)}</td>
+      </tr>`;
+    });
+    flightTableHTML += `</tbody></table>`;
+    document.getElementById('flightData').innerHTML = flightTableHTML;
+
+    // Cost Summary Table
+    let costTableHTML = `<h2>Cost Summary</h2><table>
+      <thead><tr>
+        <th>Leg</th>
+        <th>Fuel Cost (USD)</th>
+        <th>ACMI Cost (USD)</th>
+        <th>Navigation Charge (USD)</th>
+      </tr></thead><tbody>`;
+    legsData.forEach(leg => {
+      costTableHTML += `<tr>
+        <td>${leg.from} → ${leg.to}</td>
+        <td>${formatNumberEU(leg.fuelCost)}</td>
+        <td>${formatNumberEU(leg.acmiCost)}</td>
+        <td>${formatNumberEU(leg.navCharge)}</td>
+      </tr>`;
+    });
+    costTableHTML += `<tr style="font-weight:bold;">
+      <td>Totals</td>
+      <td>${formatNumberEU(totals.fuelCostUSD)}</td>
+      <td>${formatNumberEU(totals.acmiCostUSD)}</td>
+      <td>${formatNumberEU(totals.navChargeUSD)}</td>
+    </tr></tbody></table>`;
+
+    costTableHTML += `<p><strong>Total Cost (USD):</strong> ${formatNumberEU(totalCost)}</p>`;
+
+    costTableHTML += `<p>
+      Fuel Cost: ${(totals.fuelCostUSD / totalCost * 100).toFixed(0)}%<br/>
+      ACMI Cost: ${(totals.acmiCostUSD / totalCost * 100).toFixed(0)}%<br/>
+      Navigation Charge: ${(totals.navChargeUSD / totalCost * 100).toFixed(0)}%
+    </p>`;
+
+    document.getElementById('costData').innerHTML = costTableHTML;
+
+    // Airport & Country Data Table
+    let airportTableHTML = `<h2>Country & Airport Data</h2><table>
+      <thead><tr>
+        <th>Airport Code</th><th>Airport Name</th><th>City</th><th>Country</th>
+      </tr></thead><tbody>`;
+    legsData.forEach(leg => {
+      airportTableHTML += `<tr><td>${leg.from}</td><td>${leg.fromAirportName}</td><td>${leg.fromAirportCity}</td><td>${leg.fromCountry}</td></tr>`;
+      airportTableHTML += `<tr><td>${leg.to}</td><td>${leg.toAirportName}</td><td>${leg.toAirportCity}</td><td>${leg.toCountry}</td></tr>`;
+    });
+    airportTableHTML += `</tbody></table>`;
+    document.getElementById('airportData').innerHTML = airportTableHTML;
+
+    if(routeLayer) routeLayer.clearLayers();
     routeLayer = L.polyline(latlngs, {color: 'blue'}).addTo(map);
     map.fitBounds(routeLayer.getBounds());
 
@@ -299,26 +353,18 @@
       L.marker(latlng).addTo(map).bindPopup(airports[idx]).openPopup();
     });
 
+    if(warningFlag) {
+      alert("Warning: One or more legs exceed aircraft max range!");
+    }
+
     document.getElementById('route').disabled = true;
     document.getElementById('aircraft').disabled = true;
     document.getElementById('fuelPrice').disabled = true;
     document.getElementById('acmiRate').disabled = true;
+    document.getElementById('navRate').disabled = true;
     document.getElementById('calculateBtn').style.display = 'none';
     document.getElementById('queryAgainBtn').style.display = 'inline-block';
   }
-
-  function resetApp() {
-    document.getElementById('result').innerHTML = '';
-    document.getElementById('route').disabled = false;
-    document.getElementById('aircraft').disabled = false;
-    document.getElementById('fuelPrice').disabled = false;
-    document.getElementById('acmiRate').disabled = false;
-    document.getElementById('calculateBtn').style.display = 'inline-block';
-    document.getElementById('queryAgainBtn').style.display = 'none';
-
-    if(routeLayer) routeLayer.clearLayers();
-  }
 </script>
-
 </body>
 </html>
