@@ -173,7 +173,7 @@ const navChargesData = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer token='iHPosKuEeLi2rJHtUNxNJtKo'
+        'Authorization': 'Bearer token=iHPosKuEeLi2rJHtUNxNJtKo'
   },
       body: JSON.stringify({ from: origin.toUpperCase(), to: destination.toUpperCase() })
     });
@@ -219,6 +219,10 @@ function calculateNavCharges(fromCountry, toCountry, nm, mtowTons) {
 
   return distanceFactor * weightFactor * averageRate;
 }
+
+// Main calculation function Calculate flight details and costs
+
+console.log('Calculate button clicked');
 
   async function calculateFlight() {
     const routeInput = document.getElementById('route').value.trim().toUpperCase();
@@ -282,6 +286,27 @@ function calculateNavCharges(fromCountry, toCountry, nm, mtowTons) {
     let warningFlag = false;
     let latlngs = [];
 
+console.log(`Calculating leg: ${fromCode} to ${toCode}`);
+
+// Add error handling:
+try {
+    const data = await fetchDistanceWithCoords(fromCode, toCode);
+    if (!data || !data.data || !data.data.attributes) {
+        console.error('Invalid API response:', data);
+        throw new Error('Invalid API response structure');
+    }
+    const attr = data.data.attributes;
+    console.log('API response:', attr);
+    
+    // ... rest of the calculation code ...
+    
+} catch (error) {
+    console.error('Error:', error);
+    alert(`Error calculating flight: ${error.message}`);
+    return;
+}
+
+
     if(map) map.remove();
     map = L.map('map').setView([20, 0], 2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(map);
@@ -299,7 +324,12 @@ function calculateNavCharges(fromCountry, toCountry, nm, mtowTons) {
         const fuelBurnKg = flightTimeHrs * aircraft.fuelBurnKgPerHr;
         const fuelCost = fuelBurnKg * fuelPricePerKg;
         const acmiCost = blockTimeHrs * acmiRate;
-        const navCharge = calculateNavCharges(leg.fromCountry, leg.toCountry, nm, mtowTons);
+        const navCharge = calculateNavCharges(
+              attr.from_airport.country,
+              attr.to_airport.country,
+              nm,
+              mtowTons
+          );
 
         if (nm > aircraft.maxRangeNM) warningFlag = true;
 
