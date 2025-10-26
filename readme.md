@@ -1,3 +1,4 @@
+this is branch nav2 an i will now proceed with mods 
 
 this is an experiment, not to be useed for any live or real scenario
 All the values are a very crude apèroximation to real numbers
