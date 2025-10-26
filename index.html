@@ -93,132 +93,163 @@
     }
   }
 
-// Global Navigation Charges Data
-const navChargesData = {
-  regions: {
-    EUR: {
-      baseRate: 85,
-      countries: ['FR', 'DE', 'GB', 'IT', 'ES', 'PT', 'CH', 'AT', 'BE', 'NL', 'DK', 'NO', 'SE', 'FI']
+  // Navigation Charges Data Structure
+
+  const navChargesData = {
+    regions: {
+        EUR: {
+            baseRate: 85,
+            countries: ['FR', 'DE', 'GB', 'IT', 'ES', 'PT', 'CH', 'AT', 'BE', 'NL', 'DK', 'NO', 'SE', 'FI']
+        },
+        NAM: {
+            baseRate: 35,
+            countries: ['US', 'CA']
+        },
+        ASIA: {
+            baseRate: 55,
+            countries: ['CN', 'JP', 'KR', 'SG', 'TH', 'MY', 'ID', 'IN', 'PH', 'VN']
+        },
+        MEA: {
+            baseRate: 65,
+            countries: ['AE', 'SA', 'QA', 'BH', 'OM', 'KW']
+        },
+        AFR: {
+            baseRate: 45,
+            countries: ['ZA', 'EG', 'MA', 'NG', 'KE', 'ET']
+        },
+        SAM: {
+            baseRate: 40,
+            countries: ['BR', 'AR', 'CL', 'CO', 'PE', 'VE']
+        },
+        OCE: {
+            baseRate: 50,
+            countries: ['AU', 'NZ', 'FJ', 'PG']
+        }
     },
-    NAM: {
-      baseRate: 35,
-      countries: ['US', 'CA']
-    },
-    ASIA: {
-      baseRate: 55,
-      countries: ['CN', 'JP', 'KR', 'SG', 'TH', 'MY', 'ID', 'IN', 'PH', 'VN']
-    },
-    MEA: {
-      baseRate: 65,
-      countries: ['AE', 'SA', 'QA', 'BH', 'OM', 'KW']
-    },
-    AFR: {
-      baseRate: 45,
-      countries: ['ZA', 'EG', 'MA', 'NG', 'KE', 'ET']
-    },
-    SAM: {
-      baseRate: 40,
-      countries: ['BR', 'AR', 'CL', 'CO', 'PE', 'VE']
-    },
-    OCE: {
-      baseRate: 50,
-      countries: ['AU', 'NZ', 'FJ', 'PG']
+    countryRates: {
+        'CH': 95,
+        'GB': 80,
+        'SG': 65,
+        'JP': 70
     }
-  },
-  countryRates: {
-    'CH': 95,
-    'GB': 80,
-    'SG': 65,
-    'JP': 70
-  }
 };
 
-  function toggleAcmiInput(){
-    const container = document.getElementById('acmiRateContainer');
-    const info = document.getElementById('infoBaseAcmi');
-    if(container.style.display === 'none'){
-      container.style.display = 'block';
-      info.style.display = 'none';
-      const ac = document.getElementById('aircraft').value.trim().toUpperCase();
-      const acmiInput = document.getElementById('acmiRate');
-      acmiInput.value = (aircraftInfo[ac] ? aircraftInfo[ac].acmiRate.toFixed(0) : 4000);
-      useDefaultAcmiRate = false;
-    } else {
-      container.style.display = 'none';
-      info.style.display = 'block';
-      useDefaultAcmiRate = true;
-    }
-  }
-
-  function isValidAircraftCode(code) {
-    return /^[A-Z0-9]{3,4}$/.test(code);
-  }
-  
-  function formatFlightTime(hours) {
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    return `${h} hr ${m} min`;
-  }
-
-  function formatNumberEU(number) {
-    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(number);
-  }
-
-  let map;
-  let routeLayer;
-
-  async function fetchDistanceWithCoords(origin, destination) {
-    // Replace <YOUR_API_TOKEN> with your real Airport Gap API token
-    const response = await fetch('https://airportgap.com/api/airports/distance', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer token=iHPosKuEeLi2rJHtUNxNJtKo'
-  },
-      body: JSON.stringify({ from: origin.toUpperCase(), to: destination.toUpperCase() })
-    });
-    if (!response.ok) throw new Error('API error: ' + response.statusText);
-    return response.json();
-  }
-
-  function resetApp(){
-    document.getElementById('flightData').innerHTML = '';
-    document.getElementById('costData').innerHTML = '';
-    document.getElementById('airportData').innerHTML = '';
-    if(routeLayer) routeLayer.clearLayers();
-    if(map) map.remove();
-    map = null;
-
-    document.getElementById('route').disabled = false;
-    document.getElementById('aircraft').disabled = false;
-    document.getElementById('fuelPrice').disabled = false;
-    document.getElementById('acmiRate').disabled = false;
-    document.getElementById('navRate').disabled = false;
-    document.getElementById('calculateBtn').style.display = 'inline-block';
-    document.getElementById('queryAgainBtn').style.display = 'none';
-  }
-
-  // Add this new function before calculateFlight()
+// Navigation Charge Calculation Function
 function calculateNavCharges(fromCountry, toCountry, nm, mtowTons) {
-  let fromRegion = 'OTHER';
-  let toRegion = 'OTHER';
-  
-  for (const [region, data] of Object.entries(navChargesData.regions)) {
-    if (data.countries.includes(fromCountry)) fromRegion = region;
-    if (data.countries.includes(toCountry)) toRegion = region;
-  }
+    // Determine regions
+    let fromRegion = 'OTHER';
+    let toRegion = 'OTHER';
+    
+    // Find regions for both countries
+    for (const [region, data] of Object.entries(navChargesData.regions)) {
+        if (data.countries.includes(fromCountry)) fromRegion = region;
+        if (data.countries.includes(toCountry)) toRegion = region;
+    }
 
-  const fromRate = navChargesData.countryRates[fromCountry] || 
-                  navChargesData.regions[fromRegion]?.baseRate || 45;
-  const toRate = navChargesData.countryRates[toCountry] || 
-                navChargesData.regions[toRegion]?.baseRate || 45;
+    // Get rates (use country-specific rates if available, otherwise use region rates)
+    const fromRate = navChargesData.countryRates[fromCountry] || 
+                    navChargesData.regions[fromRegion]?.baseRate || 45;
+    const toRate = navChargesData.countryRates[toCountry] || 
+                  navChargesData.regions[toRegion]?.baseRate || 45;
 
-  const averageRate = (fromRate + toRate) / 2;
-  const weightFactor = Math.sqrt(mtowTons / 50);
-  const distanceFactor = nm / 100;
+    // Calculate average rate for the route
+    const averageRate = (fromRate + toRate) / 2;
 
-  return distanceFactor * weightFactor * averageRate;
+    // Calculate weight factor using Eurocontrol formula
+    const weightFactor = Math.sqrt(mtowTons / 50);
+
+    // Calculate distance factor (per 100 NM)
+    const distanceFactor = nm / 100;
+
+    // Calculate final charge
+    return distanceFactor * weightFactor * averageRate;
 }
+
+// Modified calculateFlight function
+async function calculateFlight() {
+    try {
+        // ... existing input validation code ...
+
+        const legsData = [];
+        let warningFlag = false;
+        let latlngs = [];
+
+        // Initialize map
+        if(map) map.remove();
+        map = L.map('map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Calculate each leg
+        for(let i = 0; i < airports.length - 1; i++) {
+            const fromCode = airports[i];
+            const toCode = airports[i+1];
+            
+            try {
+                const data = await fetchDistanceWithCoords(fromCode, toCode);
+                if (!data?.data?.attributes) {
+                    throw new Error('Invalid API response structure');
+                }
+                
+                const attr = data.data.attributes;
+                const nm = attr.nautical_miles;
+                const flightTimeHrs = nm / aircraft.speed;
+                const blockTimeHrs = flightTimeHrs + fixedBlockMinutes / 60;
+                const fuelBurnKg = flightTimeHrs * aircraft.fuelBurnKgPerHr;
+                const fuelCost = fuelBurnKg * fuelPricePerKg;
+                const acmiCost = blockTimeHrs * acmiRate;
+                
+                // Calculate navigation charges using the new function
+                const navCharge = calculateNavCharges(
+                    attr.from_airport.country,
+                    attr.to_airport.country,
+                    nm,
+                    mtowTons
+                );
+
+                if (nm > aircraft.maxRangeNM) warningFlag = true;
+
+                // Add leg data
+                legsData.push({
+                    from: fromCode,
+                    to: toCode,
+                    distanceNM: nm,
+                    flightTimeHrs,
+                    blockTimeHrs,
+                    fuelBurnKg,
+                    fuelCost,
+                    acmiCost,
+                    navCharge,
+                    fromCountry: attr.from_airport.country,
+                    toCountry: attr.to_airport.country,
+                    fromAirportName: attr.from_airport.name,
+                    toAirportName: attr.to_airport.name,
+                    fromAirportCity: attr.from_airport.city || '',
+                    toAirportCity: attr.to_airport.city || ''
+                });
+
+                // Add coordinates for map
+                latlngs.push([attr.from_airport.latitude, attr.from_airport.longitude]);
+                if(i === airports.length - 2) {
+                    latlngs.push([attr.to_airport.latitude, attr.to_airport.longitude]);
+                }
+
+            } catch(error) {
+                console.error(`Error calculating leg ${fromCode}-${toCode}:`, error);
+                throw new Error(`Error calculating leg ${fromCode} to ${toCode}: ${error.message}`);
+            }
+        }
+
+        // ... existing totals calculation and display code ...
+
+    } catch(error) {
+        console.error('Calculation error:', error);
+        alert('Error calculating flight: ' + error.message);
+    }
+}
+
 
 // Main calculation function Calculate flight details and costs
 
