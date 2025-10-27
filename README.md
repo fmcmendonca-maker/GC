@@ -1,54 +1,61 @@
-Aerohub Flight Cost Calculator — Changelog v4.09 (27 Oct 2025)
+✈️ Flight Cost Calculator v5.03
 
-New / Fixed in v4.09:
+Multi-Leg Charter & Budget Estimator
 
-Fuel Price Input
+The Flight Cost Calculator is a browser-based tool that estimates the total operating and charter cost for multi-leg routes based on aircraft type, distance, and cost parameters.
+It is designed for air charter operators, dispatchers, and aviation analysts to quickly build flight cost budgets and compare aircraft performance.
 
-Now visible by default instead of hidden.
+🚀 Features
+🧮 Cost & Performance Calculation
 
-Toggle functionality retained (“Change” link) for switching between base price info and editable input.
+Supports multi-leg routes (e.g. JFK-ORD-LAX-MEX)
 
-ACMI Input
+Calculates:
 
-Visible by default.
+Flight time & block time per leg
 
-Fixed broken HTML in infoBaseAcmi section; “Change” link now works correctly.
+Fuel burn (kg/hr)
 
-Button and Layout Fixes
+Fuel cost, ACMI cost, Navigation charges
 
-Corrected Query Again button inline styles.
+Landing, Handling, and Ground service fees (based on MTOW)
 
-Removed stray/misplaced text for cleaner layout.
+Warns if any leg exceeds aircraft maximum range
 
-HTML and Semantic Cleanup
+💸 Analytics & Visualization
 
-Fixed broken <span>/<a> tags and invalid attributes.
+Displays total and per-leg costs in structured tables
 
-Ensured proper accessibility and semantic structure.
+Analytics summary with:
 
-Usability Improvements
+Cost per NM
 
-Default inputs active on page load (useBaseFuelPrice and useDefaultAcmiRate set to false).
+Cost per block hour
 
-Toggle logic remains fully functional.
+Fuel per NM / per hour
 
-Internal Versioning
+Interactive cost breakdown pie chart (via Chart.js)
 
-Updated footer to reflect v4.09.
+Live currency conversion (USD → EUR, GBP, CAD, etc.) using exchange rate API
 
+🌍 Route Map
 
+Visual route plotting via Leaflet.js and OpenStreetMap
 
-methodology next implementations costs 
+Auto-zoom and markers for each airport
 
-V0  Distance calculator             Airport API 
-V1  ACMI                            40–50%	Covers basic operating capability
-                                    based on very crude oindustri averages
-V2  Fuel	                        25–35%	Varies heavily with distance & price of Jet A-1
-                                    Iatan fuel monitor - to be updated with more real market numbers
-V3  Use of separate files for integration with othre apps 
-V4  Airport & Navigation Fees	    10–15%	Includes landing + overflight charges
-V5  Ground Handling / Catering	    5–10%	Depends on airport & service level
-V6  Crew Hotels / Travel	        2–5%	If multi-day or long-haul
-V7  Miscellaneous               	1–3%	Variable
+🧠 Aircraft Database
 
+Reads performance and cost data from aircraftData.json
 
+Includes common Boeing, Airbus, Embraer, and CRJ models
+
+🖥️ Interface
+
+Built with TailwindCSS for clean, responsive layout
+
+Dark/Light theme toggle
+
+No backend or dependencies — runs entirely in the browser
+
+📂 Project Structure

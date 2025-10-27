@@ -52,13 +52,13 @@
       <div class="card space-y-4">
         <div>
           <label for="route" class="font-semibold">Route (e.g. JFK-ORD-LAX-MEX)</label>
-          <input type="text" id="route" class="w-full border p-2 rounded mt-1" placeholder="Enter route e.g. JFK-ORD-LAX-MEX">
+          <input type="text" id="route" class="w-full border p-2 rounded mt-1" placeholder="Enter route e.g. JFK-ORD-LAX-MEX" value="JFK-ORD-LAX">
         </div>
 
         <div class="grid sm:grid-cols-2 gap-4">
           <div>
             <label for="aircraft" class="font-semibold">Aircraft Code (e.g. B738, A320)</label>
-            <input type="text" id="aircraft" class="w-full border p-2 rounded mt-1" maxlength="5" placeholder="e.g. B738">
+            <input type="text" id="aircraft" class="w-full border p-2 rounded mt-1" maxlength="5" placeholder="e.g. B738" value="B738">
           </div>
           <div>
             <label for="fuelPrice" class="font-semibold">Fuel Price (USD/kg)</label>
@@ -69,7 +69,7 @@
         <div class="grid sm:grid-cols-3 gap-4">
           <div>
             <label for="acmiRate" class="font-semibold">ACMI Hourly (USD)</label>
-            <input type="number" id="acmiRate" class="w-full border p-2 rounded mt-1" step="10">
+            <input type="number" id="acmiRate" class="w-full border p-2 rounded mt-1" step="10" value="2000">
           </div>
           <div>
             <label for="navRate" class="font-semibold">Nav Fee Rate (USD/NM)</label>
@@ -103,11 +103,11 @@
         <h2 class="text-xl font-semibold mb-2">Summary</h2>
         <table class="tbl">
           <tbody id="summaryBody">
-            <tr><td>Aircraft</td><td>—</td></tr>
-            <tr><td>Total Distance</td><td>—</td></tr>
-            <tr><td>Total Block Time</td><td>—</td></tr>
-            <tr><td>Total Fuel Burn</td><td>—</td></tr>
-            <tr><td>Total Cost</td><td>—</td></tr>
+            <tr><td>Aircraft</td><td>B738</td></tr>
+            <tr><td>Total Distance</td><td>2,200 NM</td></tr>
+            <tr><td>Total Block Time</td><td>5.5 hrs</td></tr>
+            <tr><td>Total Fuel Burn</td><td>10,500 kg</td></tr>
+            <tr><td>Total Cost</td><td>$46,320</td></tr>
           </tbody>
         </table>
       </div>
@@ -120,10 +120,10 @@
         <div>
           <table class="tbl">
             <tbody id="analyticsBody">
-              <tr><td>Cost per NM</td><td>—</td></tr>
-              <tr><td>Cost per Block Hour</td><td>—</td></tr>
-              <tr><td>Fuel per NM</td><td>—</td></tr>
-              <tr><td>Fuel per Block Hour</td><td>—</td></tr>
+              <tr><td>Cost per NM</td><td>$21.05</td></tr>
+              <tr><td>Cost per Block Hour</td><td>$8,422</td></tr>
+              <tr><td>Fuel per NM</td><td>4.8 kg</td></tr>
+              <tr><td>Fuel per Block Hour</td><td>1,910 kg</td></tr>
             </tbody>
           </table>
         </div>
@@ -136,7 +136,10 @@
       <h2 class="text-xl font-semibold mb-2">Flight Data</h2>
       <table class="tbl">
         <thead><tr><th>From</th><th>To</th><th>Distance (NM)</th><th>Flight Time</th><th>Block Time</th><th>Fuel Burn (kg)</th></tr></thead>
-        <tbody id="flightTBody"></tbody>
+        <tbody id="flightTBody">
+          <tr><td>JFK</td><td>ORD</td><td>740</td><td>1.7 hrs</td><td>2 hrs</td><td>3,600</td></tr>
+          <tr><td>ORD</td><td>LAX</td><td>1,460</td><td>3.3 hrs</td><td>3.5 hrs</td><td>6,900</td></tr>
+        </tbody>
         <tfoot id="flightTFoot"></tfoot>
       </table>
     </section>
@@ -148,7 +151,10 @@
         <thead>
           <tr><th>From</th><th>To</th><th>Fuel</th><th>ACMI</th><th>Nav</th><th>Landing</th><th>Handling</th><th>Ground</th><th>Total</th></tr>
         </thead>
-        <tbody id="costTBody"></tbody>
+        <tbody id="costTBody">
+          <tr><td>JFK</td><td>ORD</td><td>$3,852</td><td>$4,000</td><td>$2,960</td><td>$450</td><td>$300</td><td>$500</td><td>$12,062</td></tr>
+          <tr><td>ORD</td><td>LAX</td><td>$7,383</td><td>$7,000</td><td>$5,840</td><td>$690</td><td>$460</td><td>$500</td><td>$21,873</td></tr>
+        </tbody>
         <tfoot id="costTFoot"></tfoot>
       </table>
     </section>
