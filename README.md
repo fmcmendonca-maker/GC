@@ -1,26 +1,41 @@
-this is branch nav2 an i will now proceed with mods 
+Aerohub Flight Cost Calculator — Changelog v4.09 (27 Oct 2025)
 
-this is an experiment, not to be useed for any live or real scenario
-All the values are a very crude apèroximation to real numbers
+New / Fixed in v4.09:
 
+Fuel Price Input
 
-The work done so far on the HTML flight cost calculator routine includes:
+Now visible by default instead of hidden.
 
-    Developed a multi-leg flight cost calculator that calculates distances, flight time, block time, fuel burn/cost, and ACMI costs using an external JSON file for aircraft data.
+Toggle functionality retained (“Change” link) for switching between base price info and editable input.
 
-    Included a comprehensive JSON aircraft data file containing all major commercial aircraft with key parameters (cruise speed, max range, fuel burn rates, ACMI hourly rates).
+ACMI Input
 
-    Added input validation for aircraft codes ensuring 3-4 uppercase alphanumeric characters matching the loaded aircraft data.
+Visible by default.
 
-    Implemented fetching airport distances via Airport Gap API and mapping the route visually using Leaflet.
+Fixed broken HTML in infoBaseAcmi section; “Change” link now works correctly.
 
-    Provided toggles to use fixed base fuel price (from IATA fuel price monitor) or user-entered values, and similarly for ACMI hourly rates.
+Button and Layout Fixes
 
-    Identified and addressed common issues with loading external JSON files
+Corrected Query Again button inline styles.
 
-    All other variable costs are next steps that are still not implemented 
-    
-At this stage, there is a modular modular HTML/JS app structure focusing on flight cost parameters derived from external aircraft JSON data with validation and route visualization. Next steps include:
+Removed stray/misplaced text for cleaner layout.
+
+HTML and Semantic Cleanup
+
+Fixed broken <span>/<a> tags and invalid attributes.
+
+Ensured proper accessibility and semantic structure.
+
+Usability Improvements
+
+Default inputs active on page load (useBaseFuelPrice and useDefaultAcmiRate set to false).
+
+Toggle logic remains fully functional.
+
+Internal Versioning
+
+Updated footer to reflect v4.09.
+
 
 
 methodology next implementations costs 
