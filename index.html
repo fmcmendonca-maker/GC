@@ -106,19 +106,6 @@
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
-// insert by me 
-
-document.getElementById('route').addEventListener('input', () => {
-  let val = route.value.replace(/-/g, '');
-  let newVal = '';
-  for (let i = 0; i < val.length; i += 3) {
-    newVal += val.substring(i, i + 3) + '-';
-  }
-  if (val.length % 3 === 0) newVal = newVal.slice(0, -1);
-  route.value = newVal;
-});
-// end insery 
-
 </head>
 <body>
 
