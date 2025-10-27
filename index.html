@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Flight Cost Calculator v5.0</title>
 <style>
-  /* Your existing styles here */
   body {
     font-family: Arial, sans-serif;
     margin: 20px;
@@ -64,6 +63,7 @@
     color: #666;
     text-align: center;
   }
+
   /* Responsive adjustments */
   @media (max-width: 600px) {
     body {
@@ -88,6 +88,7 @@
       font-size: 14px;
     }
   }
+
   @media (min-width: 601px) and (max-width: 900px) {
     body {
       font-size: 16px;
@@ -96,6 +97,7 @@
       max-width: 400px;
     }
   }
+
   @media (min-width: 901px) {
     body {
       font-size: 18px;
@@ -103,6 +105,7 @@
   }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
 </head>
 <body>
 
@@ -131,40 +134,24 @@
 <button id="queryAgainBtn" onclick="resetApp()" style="display:none; margin-top: 20px;">Query Again</button>
 
 <div id="result"></div>
-<div id="analytics">
-  <h2>Analytics</h2>
-  <canvas id="analyticsChart" style="max-width:600px;"></canvas>
-  <div id="analyticsText" style="margin-top: 10px; font-size: 1.1em;"></div>
-</div>
-
 <div id="map"></div>
 
 <div id="footer">© Aerohub Version 5.0 27 Oct 2025</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   let aircraftInfo = {};
 
-  // Load your aircraft data - simulate or fetch your JSON here
-  aircraftInfo = {
-    B738: {
-      speed: 450, // nm/hr approx
-      maxTakeoffWeightKg: 79015,
-      fuelBurnKgPerHr: 2600,
-      maxRangeNM: 2935,
-      acmiRate: 1800,
-      seats: 160
-    }
-    // add more aircraft as needed
-  };
+  fetch('aircraftData.json')
+    .then(response => response.json())
+    .then(data => aircraftInfo = data.aircraft)
+    .catch(err => alert("Error loading aircraft data: " + err.message));
 
   const fixedBlockMinutes = 30;
   const baseFuelPrice = 1.07;
 
   let map;
   let routeLayer;
-  let analyticsChart;
 
   function formatNumber(num) {
     return num.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -176,16 +163,17 @@
     return `${h} hr ${m} min`;
   }
 
-  // Simulated distance calculation (replace with real API call)
-  function getDistance(origin, destination) {
-    // Simple placeholder distances
-    const distances = {
-      'JFK-ORD': 740,
-      'ORD-LAX': 1460,
-      'JFK-LAX': 2475
-    };
-    const key = `${origin}-${destination}`;
-    return distances[key] || 500; // default 500 NM if unknown
+  async function fetchDistanceWithCoords(origin, destination) {
+    const response = await fetch('https://airportgap.com/api/airports/distance', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer token=iHPosKuEeLi2rJHtUNxNJtKo'
+      },
+      body: JSON.stringify({ from: origin.toUpperCase(), to: destination.toUpperCase() })
+    });
+    if (!response.ok) throw new Error('API error: ' + response.statusText);
+    return response.json();
   }
 
   async function calculateFlight() {
@@ -209,39 +197,53 @@
     let totalFuelCost = 0, totalAcmiCost = 0, totalNavCharge = 0;
     let warningFlag = false;
 
-    let flightData = [], costData = [], latlngs = [];
+    if(routeLayer) routeLayer.clearLayers();
+    if(!map) {
+      map = L.map('map').setView([20, 0], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(map);
+    }
+    let latlngs = [];
+    let flightData = [], costData = [], airportData = [];
 
     for(let i=0; i<airports.length-1; i++) {
       const fromCode = airports[i];
       const toCode = airports[i+1];
+      try {
+        const data = await fetchDistanceWithCoords(fromCode, toCode);
+        const attr = data.data.attributes;
+        const nm = attr.nautical_miles;
+        const flightTimeHrs = nm / aircraft.speed;
+        const blockTimeHrs = flightTimeHrs + fixedBlockMinutes / 60;
+        const fuelBurnKg = flightTimeHrs * aircraft.fuelBurnKgPerHr;
+        const fuelCost = fuelBurnKg * fuelPricePerKg;
+        const acmiCost = blockTimeHrs * acmiRate;
+        const navCharge = nm * Math.pow(aircraft.maxTakeoffWeightKg/1000 / 50, 0.7) * navRate;
 
-      // placeholder for latlngs - static for demo
-      latlngs.push([40 + i*5, -74 + i*5]);
+        totalNM += nm;
+        totalFlightTime += flightTimeHrs;
+        totalBlockTime += blockTimeHrs;
+        totalFuelBurn += fuelBurnKg;
+        totalFuelCost += fuelCost;
+        totalAcmiCost += acmiCost;
+        totalNavCharge += navCharge;
 
-      const nm = getDistance(fromCode, toCode);
-      const flightTimeHrs = nm / aircraft.speed;
-      const blockTimeHrs = flightTimeHrs + fixedBlockMinutes / 60;
-      const fuelBurnKg = flightTimeHrs * aircraft.fuelBurnKgPerHr;
-      const fuelCost = fuelBurnKg * fuelPricePerKg;
-      const acmiCost = blockTimeHrs * acmiRate;
-      const navCharge = nm * Math.pow(aircraft.maxTakeoffWeightKg/1000 / 50, 0.7) * navRate;
+        if (nm > aircraft.maxRangeNM) warningFlag = true;
 
-      totalNM += nm;
-      totalFlightTime += flightTimeHrs;
-      totalBlockTime += blockTimeHrs;
-      totalFuelBurn += fuelBurnKg;
-      totalFuelCost += fuelCost;
-      totalAcmiCost += acmiCost;
-      totalNavCharge += navCharge;
+        latlngs.push([attr.from_airport.latitude, attr.from_airport.longitude]);
+        if(i === airports.length-2) latlngs.push([attr.to_airport.latitude, attr.to_airport.longitude]);
 
-      if (nm > aircraft.maxRangeNM) warningFlag = true;
-
-      flightData.push({from: fromCode, to: toCode, nm, flightTimeHrs, blockTimeHrs, fuelBurnKg});
-      costData.push({from: fromCode, to: toCode, fuelCost, acmiCost, navCharge, total: fuelCost+acmiCost+navCharge});
+        flightData.push({from: fromCode, to: toCode, nm, flightTimeHrs, blockTimeHrs, fuelBurnKg});
+        costData.push({from: fromCode, to: toCode, fuelCost, acmiCost, navCharge, total: fuelCost+acmiCost+navCharge});
+        airportData.push({code: attr.from_airport.iata, name: attr.from_airport.name, country: attr.from_airport.country});
+        if(i === airports.length-2) airportData.push({code: attr.to_airport.iata, name: attr.to_airport.name, country: attr.to_airport.country});
+      } catch(e) {
+        alert(`Error fetching data for leg ${fromCode} to ${toCode}: ${e.message}`);
+        return;
+      }
     }
 
-    // Build tables & text output
     let resultHTML = '';
+
     // Flight Data Table
     resultHTML += `<h2>Flight Data</h2><table><thead><tr>
       <th>From</th><th>To</th><th>Distance (NM)</th><th>Flight Time</th><th>Block Time</th><th>Fuel Burn (kg)</th>
@@ -279,29 +281,36 @@
       <td>${formatNumber(totalFuelCost+totalAcmiCost+totalNavCharge)}</td>
     </tr></tfoot></table>`;
 
-    // Airlines and countries and Cost assumptions not included for brevity
+    // Airports & Countries Table
+    resultHTML += `<h2>Airports & Countries</h2><table><thead><tr>
+      <th>Airport Code</th><th>Airport Name</th><th>Country</th>
+    </tr></thead><tbody>`;
+    airportData.forEach(d => {
+      resultHTML += `<tr><td>${d.code}</td><td>${d.name}</td><td>${d.country}</td></tr>`;
+    });
+    resultHTML += `</tbody></table>`;
+
+    // Cost Assumptions Table
+    resultHTML += `<h2>Cost Assumptions</h2><table><tbody>
+      <tr><td>Aircraft Type</td><td>${aircraftCode}</td></tr>
+      <tr><td>Max Takeoff Weight (kg)</td><td>${formatNumber(aircraft.maxTakeoffWeightKg)}</td></tr>
+      <tr><td>Fuel Burn per Hour (kg/hr)</td><td>${formatNumber(aircraft.fuelBurnKgPerHr)}</td></tr>
+      <tr><td>Fuel Price (USD/kg)</td><td>${fuelPricePerKg}</td></tr>
+      <tr><td>ACMI Hourly Rate (USD)</td><td>${formatNumber(acmiRate)}</td></tr>
+      <tr><td>Air Navigation Fee Rate (USD/NM)</td><td>${formatNumber(navRate)}</td></tr>
+      <tr><td>Block Time Adjustment (min)</td><td>${fixedBlockMinutes}</td></tr>
+      <tr><td>Aircraft Max Range (NM)</td><td>${formatNumber(aircraft.maxRangeNM)}</td></tr>
+      <tr><td>Warning</td><td>${warningFlag ? 'One or more legs exceed max range!' : 'No'}</td></tr>
+    </tbody></table>`;
 
     document.getElementById('result').innerHTML = resultHTML;
 
     // Map
-    if (routeLayer) {
-      routeLayer.remove();
-    }
-    if (!map) {
-      map = L.map('map').setView(latlngs[0], 5);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '© OpenStreetMap'
-      }).addTo(map);
-    }
     routeLayer = L.polyline(latlngs, {color: 'blue'}).addTo(map);
     map.fitBounds(routeLayer.getBounds());
     latlngs.forEach((latlng, idx) => {
-      L.marker(latlng).addTo(map).bindPopup(airports[idx]);
+      L.marker(latlng).addTo(map).bindPopup(airports[idx]).openPopup();
     });
-
-    // Analytics chart
-    renderAnalyticsChart(totalFuelCost, totalAcmiCost, totalNavCharge, totalNM, totalBlockTime, totalFuelBurn, aircraft.seats);
 
     document.getElementById('route').disabled = true;
     document.getElementById('aircraft').disabled = true;
@@ -312,50 +321,8 @@
     document.getElementById('queryAgainBtn').style.display = 'inline-block';
   }
 
-  function renderAnalyticsChart(totalFuelCost, totalAcmiCost, totalNavCharge, totalNM, totalBlockTime, totalFuelBurn, seats) {
-    const ctx = document.getElementById('analyticsChart').getContext('2d');
-
-    if(analyticsChart) {
-      analyticsChart.destroy();
-    }
-
-    analyticsChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Fuel', 'ACMI', 'Navigation'],
-        datasets: [{
-          data: [totalFuelCost, totalAcmiCost, totalNavCharge],
-          backgroundColor: ['#4f46e5', '#3b82f6', '#f87171'],
-          hoverOffset: 30
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: 'bottom' },
-          title: { display: true, text: 'Cost Breakdown (USD)' }
-        }
-      }
-    });
-
-    // Display textual key metrics under the chart
-    const analyticsText = `
-      <p><strong>Cost per NM:</strong> $${((totalFuelCost + totalAcmiCost + totalNavCharge) / totalNM).toFixed(2)}</p>
-      <p><strong>Cost per Block Hour:</strong> $${((totalFuelCost + totalAcmiCost + totalNavCharge) / totalBlockTime).toFixed(2)}</p>
-      <p><strong>Fuel per Seat-NM:</strong> ${(totalFuelBurn / (seats * totalNM)).toFixed(2)} kg</p>
-    `;
-    document.getElementById('analyticsText').innerHTML = analyticsText;
-  }
-
   function resetApp() {
     document.getElementById('result').innerHTML = '';
-    document.getElementById('analyticsChart').getContext('2d').clearRect(0,0,600,400);
-    document.getElementById('analyticsText').innerHTML = '';
-    document.getElementById('route').value = '';
-    document.getElementById('aircraft').value = '';
-    document.getElementById('fuelPrice').value = '1.07';
-    document.getElementById('acmiRate').value = '';
-    document.getElementById('navRate').value = '4';
     document.getElementById('route').disabled = false;
     document.getElementById('aircraft').disabled = false;
     document.getElementById('fuelPrice').disabled = false;
@@ -363,7 +330,7 @@
     document.getElementById('navRate').disabled = false;
     document.getElementById('calculateBtn').style.display = 'inline-block';
     document.getElementById('queryAgainBtn').style.display = 'none';
-    if(routeLayer) routeLayer.remove();
+    if(routeLayer) routeLayer.clearLayers();
   }
 </script>
 </body>
