@@ -23,16 +23,15 @@
 
 <h1>Multi-Leg Flight Distance </h1>
 
-<label for="route">Route (e.g. V5  JFK-ORD-LAX-MEX):</label>
+<label for="route">Route (e.g. V7  JFK-ORD-LAX-MEX):</label>
 <input type="text" id="route" placeholder="Enter multi-leg route, e.g. JFK-ORD-LAX-MEX" />
 
 <label for="aircraft">Aircraft Code (e.g. B738, A320):</label>
 <input type="text" id="aircraft" maxlength="5" placeholder="e.g. B738" />
 
-<div id="fuelPriceContainer" style="display:none;">
+<div id="fuelPriceContainer" >
   <label for="fuelPrice">Fuel Price (USD/kg):</label>
  <!-- Using base fuel info with toggle to show editable input --> 
-
   <input type="number" id="fuelPrice" step="0.01" value="1.07" />
 </div>
 <div id="infoBasePrice">
