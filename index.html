@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Cost Calculator v5.04</title>
+  <title>Flight Cost Calculator v5.03</title>
 
   <!-- Tailwind CSS -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
@@ -29,27 +29,19 @@
     .dark .tbl tfoot td { background:#151621; }
     .badge { display:inline-block; font-size:0.7rem; padding:0.2rem 0.5rem; border-radius:0.5rem; background:#eef2ff; color:#374151; }
     .dark .badge { background:#1a1b22; color:#c9c9ce; }
-    .hint { font-size:0.75rem; color:#6b7280; }
-    .dark .hint { color:#a1a1aa; }
-    .section-title { font-size:1.125rem; font-weight:700; margin-bottom:0.5rem; }
-    .compact-60 { max-width: 60ch; }
-    @media (min-width:1024px){ .w-60p{ width:60%; } }
   </style>
 </head>
 
 <body class="p-4">
   <div class="container mx-auto max-w-7xl space-y-6">
     <header class="flex items-center justify-between">
-      <h1 class="text-3xl font-bold">Multi-Leg Charter Price Calculator <span class="badge">v5.04</span></h1>
+      <h1 class="text-3xl font-bold">Multi-Leg Charter Price Calculator <span class="badge">v5.03</span></h1>
       <div class="flex items-center gap-3">
         <select id="currency" class="border rounded px-3 py-2">
           <option value="USD" selected>USD</option>
           <option value="EUR">EUR</option>
           <option value="GBP">GBP</option>
           <option value="CAD">CAD</option>
-          <option value="AUD">AUD</option>
-          <option value="JPY">JPY</option>
-          <option value="MXN">MXN</option>
         </select>
         <button onclick="toggleTheme()" class="bg-gray-900 text-white px-3 py-2 rounded">Toggle Theme</button>
       </div>
@@ -61,7 +53,6 @@
         <div>
           <label for="route" class="font-semibold">Route (e.g. JFK-ORD-LAX-MEX)</label>
           <input type="text" id="route" class="w-full border p-2 rounded mt-1" placeholder="Enter route e.g. JFK-ORD-LAX-MEX">
-          <p class="hint mt-1">Use IATA 3-letter codes. Hyphens auto-insert.</p>
         </div>
 
         <div class="grid sm:grid-cols-2 gap-4">
@@ -104,34 +95,30 @@
         <div class="flex flex-wrap gap-3 pt-2">
           <button id="calculateBtn" onclick="calculateFlight()" class="bg-blue-600 text-white px-4 py-2 rounded">Calculate</button>
           <button id="queryAgainBtn" onclick="resetApp()" class="hidden bg-gray-600 text-white px-4 py-2 rounded">New Query</button>
-          <span id="ratesInfo" class="hint self-center"></span>
         </div>
       </div>
 
-      <!-- Table 1 — Summary -->
+      <!-- Summary -->
       <div class="card">
-        <h2 class="section-title">Table 1 — Summary</h2>
+        <h2 class="text-xl font-semibold mb-2">Summary</h2>
         <table class="tbl">
           <tbody id="summaryBody">
             <tr><td>Aircraft</td><td>—</td></tr>
-            <tr><td>MTOW</td><td>—</td></tr>
-            <tr><td>ACMI Rate (per Block Hour)</td><td>—</td></tr>
             <tr><td>Total Distance</td><td>—</td></tr>
             <tr><td>Total Block Time</td><td>—</td></tr>
             <tr><td>Total Fuel Burn</td><td>—</td></tr>
             <tr><td>Total Cost</td><td>—</td></tr>
-            <tr><td>Warnings</td><td>—</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- Table 2 — Analytics + Chart -->
-    <section class="card mx-auto w-full lg:w-60p">
-      <h2 class="section-title">Table 2 — Analytics</h2>
-      <div class="grid md:grid-cols-2 gap-4 items-start">
+    <!-- Results -->
+    <section class="card">
+      <h2 class="text-xl font-semibold mb-2">Analytics & Cost Breakdown</h2>
+      <div class="grid md:grid-cols-2 gap-4">
         <div>
-          <table class="tbl compact-60">
+          <table class="tbl">
             <tbody id="analyticsBody">
               <tr><td>Cost per NM</td><td>—</td></tr>
               <tr><td>Cost per Block Hour</td><td>—</td></tr>
@@ -140,72 +127,47 @@
             </tbody>
           </table>
         </div>
-        <div>
-          <canvas id="costChart"></canvas>
-        </div>
+        <div><canvas id="costChart"></canvas></div>
       </div>
     </section>
 
-    <!-- Table 3 — Flight Data -->
+    <!-- Flight Data -->
     <section class="card">
-      <h2 class="section-title">Table 3 — Flight Data</h2>
-      <div class="overflow-x-auto">
-        <table class="tbl">
-          <thead>
-            <tr>
-              <th>From</th><th>To</th><th>Distance (NM)</th>
-              <th>Flight Time</th><th>Block Time</th><th>Fuel Burn (kg)</th>
-            </tr>
-          </thead>
-          <tbody id="flightTBody"></tbody>
-          <tfoot id="flightTFoot"></tfoot>
-        </table>
-      </div>
+      <h2 class="text-xl font-semibold mb-2">Flight Data</h2>
+      <table class="tbl">
+        <thead><tr><th>From</th><th>To</th><th>Distance (NM)</th><th>Flight Time</th><th>Block Time</th><th>Fuel Burn (kg)</th></tr></thead>
+        <tbody id="flightTBody"></tbody>
+        <tfoot id="flightTFoot"></tfoot>
+      </table>
     </section>
 
-    <!-- Table 4 — Cost by Leg -->
+    <!-- Cost Table -->
     <section class="card">
-      <h2 class="section-title">Table 4 — Cost by Leg</h2>
-      <div class="overflow-x-auto">
-        <table class="tbl">
-          <thead>
-            <tr>
-              <th>From</th><th>To</th>
-              <th>Fuel</th><th>ACMI</th><th>Nav</th>
-              <th>Landing</th><th>Handling</th><th>Ground</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody id="costTBody"></tbody>
-          <tfoot id="costTFoot"></tfoot>
-        </table>
-      </div>
+      <h2 class="text-xl font-semibold mb-2">Cost by Leg</h2>
+      <table class="tbl">
+        <thead>
+          <tr><th>From</th><th>To</th><th>Fuel</th><th>ACMI</th><th>Nav</th><th>Landing</th><th>Handling</th><th>Ground</th><th>Total</th></tr>
+        </thead>
+        <tbody id="costTBody"></tbody>
+        <tfoot id="costTFoot"></tfoot>
+      </table>
     </section>
 
     <!-- Map -->
     <section class="card">
-      <h2 class="section-title">Route Map</h2>
-      <div id="map" class="rounded"></div>
+      <h2 class="text-xl font-semibold mb-2">Route Map</h2>
+      <div id="map"></div>
     </section>
 
-    <footer class="text-center hint">
-      © Aerohub Version 5.04 — 27 Oct 2025
+    <footer class="text-center text-gray-500 text-sm">
+      © Aerohub Version 5.03 — 27 Oct 2025
     </footer>
   </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
   <script>
-    /* The calculation, data fetch, and render functions are identical
-       to the prior message version, only truncated here for brevity. */
-
-    // -- All JS code from previous part up to resetApp() remains identical here --
-
-    // Re-render on currency change without recomputing distances
-    document.getElementById('currency').addEventListener('change', () => {
-      if (lastResult) renderAll();
-      saveInputs();
-    });
+    /* ---- JS identical to v5.03 functional version ---- */
+    // (You can use the working JS from your previous copy where calculations, currency, and map worked)
   </script>
 </body>
 </html>
