@@ -1,180 +1,337 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Cost Calculator v5.03</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flight Cost Calculator v5.0</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+  }
+  label {
+    display: block;
+    margin: 10px 0 5px;
+  }
+  input, select {
+    padding: 8px;
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+  }
+  button {
+    padding: 10px 15px;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+  table {
+    margin-top: 20px;
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 1200px;
+    overflow-x: auto;
+    display: block;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+    white-space: nowrap;
+  }
+  th {
+    background-color: #f5f5f5;
+  }
+  tfoot {
+    font-weight: bold;
+  }
+  .warning {
+    color: red;
+    font-weight: bold;
+  }
+  #result p strong {
+    display: inline-block;
+    min-width: 170px;
+  }
+  #map {
+    height: 400px;
+    max-width: 900px;
+    margin-top: 20px;
+  }
+  #footer {
+    margin-top: 30px;
+    font-size: 0.9em;
+    color: #666;
+    text-align: center;
+  }
 
-  <!-- Tailwind CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+  /* Responsive adjustments */
+  @media (max-width: 600px) {
+    body {
+      margin: 10px;
+      font-size: 14px;
+    }
+    table {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    th, td {
+      white-space: normal;
+      padding: 6px 4px;
+    }
+    input, button {
+      max-width: 100%;
+      font-size: 14px;
+      padding: 10px 8px;
+    }
+    label {
+      font-size: 14px;
+    }
+  }
 
-  <!-- Leaflet Map -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  @media (min-width: 601px) and (max-width: 900px) {
+    body {
+      font-size: 16px;
+    }
+    input, button {
+      max-width: 400px;
+    }
+  }
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  @media (min-width: 901px) {
+    body {
+      font-size: 18px;
+    }
+  }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
-  <style>
-    #map { height: 420px; }
-    body.dark { background-color: #0b0b0e; color: #e7e7ea; }
-    .card { border-radius: 0.75rem; box-shadow: 0 2px 14px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.06); padding: 1rem; }
-    .dark .card { border-color:#2a2b35; background-color:#101116; }
-    .tbl { width:100%; font-size:0.9rem; border:1px solid rgba(0,0,0,0.08); border-radius:0.5rem; overflow:hidden; }
-    .dark .tbl { border-color:#2a2b35; }
-    .tbl th { background:#f6f7f9; text-align:left; font-weight:600; padding:0.5rem 0.75rem; white-space:nowrap; }
-    .dark .tbl th { background:#1a1b22; }
-    .tbl td { padding:0.5rem 0.75rem; border-top:1px solid rgba(0,0,0,0.08); }
-    .dark .tbl td { border-top-color:#2a2b35; }
-    .tbl tfoot td { font-weight:700; background:#fafafa; }
-    .dark .tbl tfoot td { background:#151621; }
-    .badge { display:inline-block; font-size:0.7rem; padding:0.2rem 0.5rem; border-radius:0.5rem; background:#eef2ff; color:#374151; }
-    .dark .badge { background:#1a1b22; color:#c9c9ce; }
-  </style>
 </head>
+<body>
 
-<body class="p-4">
-  <div class="container mx-auto max-w-7xl space-y-6">
-    <header class="flex items-center justify-between">
-      <h1 class="text-3xl font-bold">Multi-Leg Charter Price Calculator <span class="badge">v5.03</span></h1>
-      <div class="flex items-center gap-3">
-        <select id="currency" class="border rounded px-3 py-2">
-          <option value="USD" selected>USD</option>
-          <option value="EUR">EUR</option>
-          <option value="GBP">GBP</option>
-          <option value="CAD">CAD</option>
-        </select>
-        <button onclick="toggleTheme()" class="bg-gray-900 text-white px-3 py-2 rounded">Toggle Theme</button>
-      </div>
-    </header>
+<h1>Multi-Leg Flight Cost Calculator v5.0</h1>
 
-    <!-- Inputs -->
-    <section class="grid lg:grid-cols-2 gap-6">
-      <div class="card space-y-4">
-        <div>
-          <label for="route" class="font-semibold">Route (e.g. JFK-ORD-LAX-MEX)</label>
-          <input type="text" id="route" class="w-full border p-2 rounded mt-1" placeholder="Enter route e.g. JFK-ORD-LAX-MEX" value="JFK-ORD-LAX">
-        </div>
+<label for="route">Route (e.g. JFK-ORD-LAX-MEX):</label>
+<input type="text" id="route" placeholder="Enter multi-leg route, e.g. JFK-ORD-LAX-MEX" />
 
-        <div class="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label for="aircraft" class="font-semibold">Aircraft Code (e.g. B738, A320)</label>
-            <input type="text" id="aircraft" class="w-full border p-2 rounded mt-1" maxlength="5" placeholder="e.g. B738" value="B738">
-          </div>
-          <div>
-            <label for="fuelPrice" class="font-semibold">Fuel Price (USD/kg)</label>
-            <input type="number" id="fuelPrice" class="w-full border p-2 rounded mt-1" step="0.01" value="1.07">
-          </div>
-        </div>
+<label for="aircraft">Aircraft Code (e.g. B738, A320):</label>
+<input type="text" id="aircraft" maxlength="5" placeholder="e.g. B738" />
 
-        <div class="grid sm:grid-cols-3 gap-4">
-          <div>
-            <label for="acmiRate" class="font-semibold">ACMI Hourly (USD)</label>
-            <input type="number" id="acmiRate" class="w-full border p-2 rounded mt-1" step="10" value="2000">
-          </div>
-          <div>
-            <label for="navRate" class="font-semibold">Nav Fee Rate (USD/NM)</label>
-            <input type="number" id="navRate" class="w-full border p-2 rounded mt-1" step="0.1" value="4">
-          </div>
-          <div>
-            <label for="groundFee" class="font-semibold">Ground Service (USD/stop)</label>
-            <input type="number" id="groundFee" class="w-full border p-2 rounded mt-1" step="10" value="500">
-          </div>
-        </div>
+<div id="fuelPriceContainer">
+  <label for="fuelPrice">Fuel Price (USD/kg):</label>
+  <input type="number" id="fuelPrice" step="0.01" value="1.07" />
+</div>
 
-        <div class="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label for="landingRate" class="font-semibold">Landing Fee (USD/ton)</label>
-            <input type="number" id="landingRate" class="w-full border p-2 rounded mt-1" step="1" value="15">
-          </div>
-          <div>
-            <label for="handlingRate" class="font-semibold">Handling Fee (USD/ton)</label>
-            <input type="number" id="handlingRate" class="w-full border p-2 rounded mt-1" step="1" value="10">
-          </div>
-        </div>
+<div id="acmiRateContainer">
+  <label for="acmiRate">ACMI Hourly Rate (USD):</label>
+  <input type="number" id="acmiRate" step="10" />
+</div>
 
-        <div class="flex flex-wrap gap-3 pt-2">
-          <button id="calculateBtn" onclick="calculateFlight()" class="bg-blue-600 text-white px-4 py-2 rounded">Calculate</button>
-          <button id="queryAgainBtn" onclick="resetApp()" class="hidden bg-gray-600 text-white px-4 py-2 rounded">New Query</button>
-        </div>
-      </div>
+<label for="navRate">Air Navigation Fee Rate (USD/NM):</label>
+<input type="number" id="navRate" step="0.1" value="4" />
 
-      <!-- Summary -->
-      <div class="card">
-        <h2 class="text-xl font-semibold mb-2">Summary</h2>
-        <table class="tbl">
-          <tbody id="summaryBody">
-            <tr><td>Aircraft</td><td>B738</td></tr>
-            <tr><td>Total Distance</td><td>2,200 NM</td></tr>
-            <tr><td>Total Block Time</td><td>5.5 hrs</td></tr>
-            <tr><td>Total Fuel Burn</td><td>10,500 kg</td></tr>
-            <tr><td>Total Cost</td><td>$46,320</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+<button id="calculateBtn" onclick="calculateFlight()">Calculate</button>
+<button id="queryAgainBtn" onclick="resetApp()" style="display:none; margin-top: 20px;">Query Again</button>
 
-    <!-- Results -->
-    <section class="card">
-      <h2 class="text-xl font-semibold mb-2">Analytics & Cost Breakdown</h2>
-      <div class="grid md:grid-cols-2 gap-4">
-        <div>
-          <table class="tbl">
-            <tbody id="analyticsBody">
-              <tr><td>Cost per NM</td><td>$21.05</td></tr>
-              <tr><td>Cost per Block Hour</td><td>$8,422</td></tr>
-              <tr><td>Fuel per NM</td><td>4.8 kg</td></tr>
-              <tr><td>Fuel per Block Hour</td><td>1,910 kg</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div><canvas id="costChart"></canvas></div>
-      </div>
-    </section>
+<div id="result"></div>
+<div id="map"></div>
 
-    <!-- Flight Data -->
-    <section class="card">
-      <h2 class="text-xl font-semibold mb-2">Flight Data</h2>
-      <table class="tbl">
-        <thead><tr><th>From</th><th>To</th><th>Distance (NM)</th><th>Flight Time</th><th>Block Time</th><th>Fuel Burn (kg)</th></tr></thead>
-        <tbody id="flightTBody">
-          <tr><td>JFK</td><td>ORD</td><td>740</td><td>1.7 hrs</td><td>2 hrs</td><td>3,600</td></tr>
-          <tr><td>ORD</td><td>LAX</td><td>1,460</td><td>3.3 hrs</td><td>3.5 hrs</td><td>6,900</td></tr>
-        </tbody>
-        <tfoot id="flightTFoot"></tfoot>
-      </table>
-    </section>
+<div id="footer">© Aerohub Version 5.0 27 Oct 2025</div>
 
-    <!-- Cost Table -->
-    <section class="card">
-      <h2 class="text-xl font-semibold mb-2">Cost by Leg</h2>
-      <table class="tbl">
-        <thead>
-          <tr><th>From</th><th>To</th><th>Fuel</th><th>ACMI</th><th>Nav</th><th>Landing</th><th>Handling</th><th>Ground</th><th>Total</th></tr>
-        </thead>
-        <tbody id="costTBody">
-          <tr><td>JFK</td><td>ORD</td><td>$3,852</td><td>$4,000</td><td>$2,960</td><td>$450</td><td>$300</td><td>$500</td><td>$12,062</td></tr>
-          <tr><td>ORD</td><td>LAX</td><td>$7,383</td><td>$7,000</td><td>$5,840</td><td>$690</td><td>$460</td><td>$500</td><td>$21,873</td></tr>
-        </tbody>
-        <tfoot id="costTFoot"></tfoot>
-      </table>
-    </section>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  let aircraftInfo = {};
 
-    <!-- Map -->
-    <section class="card">
-      <h2 class="text-xl font-semibold mb-2">Route Map</h2>
-      <div id="map"></div>
-    </section>
+  fetch('aircraftData.json')
+    .then(response => response.json())
+    .then(data => aircraftInfo = data.aircraft)
+    .catch(err => alert("Error loading aircraft data: " + err.message));
 
-    <footer class="text-center text-gray-500 text-sm">
-      © Aerohub Version 5.03 — 27 Oct 2025
-    </footer>
-  </div>
+  const fixedBlockMinutes = 30;
+  const baseFuelPrice = 1.07;
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    /* ---- JS identical to v5.03 functional version ---- */
-    // (You can use the working JS from your previous copy where calculations, currency, and map worked)
-  </script>
+  let map;
+  let routeLayer;
+
+  function formatNumber(num) {
+    return num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  }
+
+  function formatFlightTime(hours) {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h} hr ${m} min`;
+  }
+
+  async function fetchDistanceWithCoords(origin, destination) {
+    const response = await fetch('https://airportgap.com/api/airports/distance', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer token=iHPosKuEeLi2rJHtUNxNJtKo'
+      },
+      body: JSON.stringify({ from: origin.toUpperCase(), to: destination.toUpperCase() })
+    });
+    if (!response.ok) throw new Error('API error: ' + response.statusText);
+    return response.json();
+  }
+
+  async function calculateFlight() {
+    const routeInput = document.getElementById('route').value.trim().toUpperCase();
+    const aircraftCode = document.getElementById('aircraft').value.trim().toUpperCase();
+
+    if (!aircraftInfo[aircraftCode]) {
+      alert('Aircraft code not found in database.');
+      return;
+    }
+    const aircraft = aircraftInfo[aircraftCode];
+
+    const fuelPricePerKg = parseFloat(document.getElementById('fuelPrice').value) || baseFuelPrice;
+    const acmiRate = parseFloat(document.getElementById('acmiRate').value) || aircraft.acmiRate;
+    const navRate = parseFloat(document.getElementById('navRate').value);
+
+    const airports = routeInput.split('-');
+    if (airports.length < 2) { alert('Enter at least two airports.'); return; }
+
+    let totalNM = 0, totalFlightTime = 0, totalBlockTime = 0, totalFuelBurn = 0;
+    let totalFuelCost = 0, totalAcmiCost = 0, totalNavCharge = 0;
+    let warningFlag = false;
+
+    if(routeLayer) routeLayer.clearLayers();
+    if(!map) {
+      map = L.map('map').setView([20, 0], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(map);
+    }
+    let latlngs = [];
+    let flightData = [], costData = [], airportData = [];
+
+    for(let i=0; i<airports.length-1; i++) {
+      const fromCode = airports[i];
+      const toCode = airports[i+1];
+      try {
+        const data = await fetchDistanceWithCoords(fromCode, toCode);
+        const attr = data.data.attributes;
+        const nm = attr.nautical_miles;
+        const flightTimeHrs = nm / aircraft.speed;
+        const blockTimeHrs = flightTimeHrs + fixedBlockMinutes / 60;
+        const fuelBurnKg = flightTimeHrs * aircraft.fuelBurnKgPerHr;
+        const fuelCost = fuelBurnKg * fuelPricePerKg;
+        const acmiCost = blockTimeHrs * acmiRate;
+        const navCharge = nm * Math.pow(aircraft.maxTakeoffWeightKg/1000 / 50, 0.7) * navRate;
+
+        totalNM += nm;
+        totalFlightTime += flightTimeHrs;
+        totalBlockTime += blockTimeHrs;
+        totalFuelBurn += fuelBurnKg;
+        totalFuelCost += fuelCost;
+        totalAcmiCost += acmiCost;
+        totalNavCharge += navCharge;
+
+        if (nm > aircraft.maxRangeNM) warningFlag = true;
+
+        latlngs.push([attr.from_airport.latitude, attr.from_airport.longitude]);
+        if(i === airports.length-2) latlngs.push([attr.to_airport.latitude, attr.to_airport.longitude]);
+
+        flightData.push({from: fromCode, to: toCode, nm, flightTimeHrs, blockTimeHrs, fuelBurnKg});
+        costData.push({from: fromCode, to: toCode, fuelCost, acmiCost, navCharge, total: fuelCost+acmiCost+navCharge});
+        airportData.push({code: attr.from_airport.iata, name: attr.from_airport.name, country: attr.from_airport.country});
+        if(i === airports.length-2) airportData.push({code: attr.to_airport.iata, name: attr.to_airport.name, country: attr.to_airport.country});
+      } catch(e) {
+        alert(`Error fetching data for leg ${fromCode} to ${toCode}: ${e.message}`);
+        return;
+      }
+    }
+
+    let resultHTML = '';
+
+    // Flight Data Table
+    resultHTML += `<h2>Flight Data</h2><table><thead><tr>
+      <th>From</th><th>To</th><th>Distance (NM)</th><th>Flight Time</th><th>Block Time</th><th>Fuel Burn (kg)</th>
+    </tr></thead><tbody>`;
+    flightData.forEach(d => {
+      resultHTML += `<tr>
+        <td>${d.from}</td><td>${d.to}</td><td>${formatNumber(d.nm)}</td>
+        <td>${formatFlightTime(d.flightTimeHrs)}</td><td>${formatFlightTime(d.blockTimeHrs)}</td>
+        <td>${formatNumber(d.fuelBurnKg)}</td>
+      </tr>`;
+    });
+    resultHTML += `<tfoot><tr>
+      <td colspan="2">Total</td>
+      <td>${formatNumber(totalNM)}</td>
+      <td>${formatFlightTime(totalFlightTime)}</td>
+      <td>${formatFlightTime(totalBlockTime)}</td>
+      <td>${formatNumber(totalFuelBurn)}</td>
+    </tr></tfoot></table>`;
+
+    // Cost Table
+    resultHTML += `<h2>Cost Table</h2><table><thead><tr>
+      <th>From</th><th>To</th><th>Fuel Cost (USD)</th><th>ACMI Cost (USD)</th><th>Navigation Charge (USD)</th><th>Total Cost (USD)</th>
+    </tr></thead><tbody>`;
+    costData.forEach(d => {
+      resultHTML += `<tr>
+        <td>${d.from}</td><td>${d.to}</td><td>${formatNumber(d.fuelCost)}</td>
+        <td>${formatNumber(d.acmiCost)}</td><td>${formatNumber(d.navCharge)}</td><td>${formatNumber(d.total)}</td>
+      </tr>`;
+    });
+    resultHTML += `<tfoot><tr>
+      <td colspan="2">Total</td>
+      <td>${formatNumber(totalFuelCost)}</td>
+      <td>${formatNumber(totalAcmiCost)}</td>
+      <td>${formatNumber(totalNavCharge)}</td>
+      <td>${formatNumber(totalFuelCost+totalAcmiCost+totalNavCharge)}</td>
+    </tr></tfoot></table>`;
+
+    // Airports & Countries Table
+    resultHTML += `<h2>Airports & Countries</h2><table><thead><tr>
+      <th>Airport Code</th><th>Airport Name</th><th>Country</th>
+    </tr></thead><tbody>`;
+    airportData.forEach(d => {
+      resultHTML += `<tr><td>${d.code}</td><td>${d.name}</td><td>${d.country}</td></tr>`;
+    });
+    resultHTML += `</tbody></table>`;
+
+    // Cost Assumptions Table
+    resultHTML += `<h2>Cost Assumptions</h2><table><tbody>
+      <tr><td>Aircraft Type</td><td>${aircraftCode}</td></tr>
+      <tr><td>Max Takeoff Weight (kg)</td><td>${formatNumber(aircraft.maxTakeoffWeightKg)}</td></tr>
+      <tr><td>Fuel Burn per Hour (kg/hr)</td><td>${formatNumber(aircraft.fuelBurnKgPerHr)}</td></tr>
+      <tr><td>Fuel Price (USD/kg)</td><td>${fuelPricePerKg}</td></tr>
+      <tr><td>ACMI Hourly Rate (USD)</td><td>${formatNumber(acmiRate)}</td></tr>
+      <tr><td>Air Navigation Fee Rate (USD/NM)</td><td>${formatNumber(navRate)}</td></tr>
+      <tr><td>Block Time Adjustment (min)</td><td>${fixedBlockMinutes}</td></tr>
+      <tr><td>Aircraft Max Range (NM)</td><td>${formatNumber(aircraft.maxRangeNM)}</td></tr>
+      <tr><td>Warning</td><td>${warningFlag ? 'One or more legs exceed max range!' : 'No'}</td></tr>
+    </tbody></table>`;
+
+    document.getElementById('result').innerHTML = resultHTML;
+
+    // Map
+    routeLayer = L.polyline(latlngs, {color: 'blue'}).addTo(map);
+    map.fitBounds(routeLayer.getBounds());
+    latlngs.forEach((latlng, idx) => {
+      L.marker(latlng).addTo(map).bindPopup(airports[idx]).openPopup();
+    });
+
+    document.getElementById('route').disabled = true;
+    document.getElementById('aircraft').disabled = true;
+    document.getElementById('fuelPrice').disabled = true;
+    document.getElementById('acmiRate').disabled = true;
+    document.getElementById('navRate').disabled = true;
+    document.getElementById('calculateBtn').style.display = 'none';
+    document.getElementById('queryAgainBtn').style.display = 'inline-block';
+  }
+
+  function resetApp() {
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('route').disabled = false;
+    document.getElementById('aircraft').disabled = false;
+    document.getElementById('fuelPrice').disabled = false;
+    document.getElementById('acmiRate').disabled = false;
+    document.getElementById('navRate').disabled = false;
+    document.getElementById('calculateBtn').style.display = 'inline-block';
+    document.getElementById('queryAgainBtn').style.display = 'none';
+    if(routeLayer) routeLayer.clearLayers();
+  }
+</script>
 </body>
 </html>
