@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Cost Calculator v5.04</title>
+  <title>Flight Cost Calculator v5.05 — Pro Charter Edition</title>
 
   <!-- Tailwind CSS -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet" />
@@ -35,7 +35,7 @@
 <body class="p-4">
   <div class="container mx-auto max-w-7xl space-y-6">
     <header class="flex items-center justify-between">
-      <h1 class="text-3xl font-bold">Multi-Leg Charter Price Calculator <span class="badge">v5.04</span></h1>
+      <h1 class="text-3xl font-bold">Multi-Leg Charter Price Calculator <span class="badge">v5.05</span></h1>
       <div class="flex items-center gap-3">
         <select id="currency" class="border rounded px-3 py-2">
           <option value="USD" selected>USD</option>
@@ -101,7 +101,21 @@
       </div>
     </section>
 
-    <!-- Results: Four Tables -->
+    <!-- Table 0 — Flight Details (per leg) -->
+    <section class="card">
+      <h2 class="section-title">Table 0 — Flight Details</h2>
+      <div class="overflow-x-auto">
+        <table class="tbl">
+          <thead>
+            <tr><th>From</th><th>To</th><th>Distance (NM)</th><th>Block Time</th></tr>
+          </thead>
+          <tbody id="flightDetailsBody"></tbody>
+          <tfoot id="flightDetailsFoot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- Results: Four Summary Tables -->
     <section class="grid lg:grid-cols-2 gap-6">
       <!-- Table 1 — Flight Summary -->
       <div class="card">
@@ -176,7 +190,7 @@
     </section>
 
     <footer class="text-center hint">
-      © Aerohub Version 5.04 — 27 Oct 2025
+      © Aerohub Version 5.05 — 28 Oct 2025
     </footer>
   </div>
 
@@ -200,7 +214,7 @@
       .then(d => aircraftInfo = d.aircraft)
       .catch(err => alert("Error loading aircraft data: " + err.message));
 
-    // ===== Currency rates (cache in localStorage 24h) =====
+    // ===== Currency rates (cache 24h) =====
     async function fetchRates() {
       try {
         const cached = JSON.parse(localStorage.getItem('fx_cache') || 'null');
@@ -266,11 +280,11 @@
       document.getElementById('aircraft').value = localStorage.getItem('lastAircraft') || '';
       const li = JSON.parse(localStorage.getItem('lastInputs') || 'null');
       if (li) {
-        document.getElementById('fuelPrice').value = li.fuelPrice ?? 1.07;
-        document.getElementById('acmiRate').value  = li.acmiRate ?? '';
-        document.getElementById('navRate').value   = li.navRate ?? 4;
-        document.getElementById('landingRate').value = li.landingRate ?? 15;
-        document.getElementById('handlingRate').value = li.handlingRate ?? 10;
+        document.getElementById('fuelPrice').value  = li.fuelPrice ?? 1.07;
+        document.getElementById('acmiRate').value   = li.acmiRate ?? '';
+        document.getElementById('navRate').value    = li.navRate ?? 4;
+        document.getElementById('landingRate').value= li.landingRate ?? 15;
+        document.getElementById('handlingRate').value= li.handlingRate ?? 10;
         document.getElementById('groundFee').value  = li.groundFee ?? 500;
         document.getElementById('currency').value   = li.currency ?? 'USD';
       }
@@ -298,10 +312,27 @@
       return res.json();
     }
 
-    // ===== Render everything from lastResult (currency-safe) =====
+    // ===== Render from lastResult (currency-safe) =====
     function renderAll() {
       if (!lastResult) return;
-      const { code, ac, acmiRate, totals, airportsInfo, warning } = lastResult;
+      const { code, ac, acmiRate, totals, airportsInfo, flightDetails, warning } = lastResult;
+
+      // Table 0 — Flight Details
+      const fdBody = document.getElementById('flightDetailsBody');
+      const fdFoot = document.getElementById('flightDetailsFoot');
+      fdBody.innerHTML = '';
+      flightDetails.forEach(d => {
+        fdBody.innerHTML += `<tr>
+          <td>${d.from}</td><td>${d.to}</td>
+          <td>${formatNumber(d.nm)}</td>
+          <td>${formatFlightTime(d.blockHrs)}</td>
+        </tr>`;
+      });
+      fdFoot.innerHTML = `<tr>
+        <td><strong>Total</strong></td><td>—</td>
+        <td><strong>${formatNumber(totals.totalNM)} NM</strong></td>
+        <td><strong>${formatFlightTime(totals.totalBlock)}</strong></td>
+      </tr>`;
 
       // Table 1 — Flight Summary
       document.getElementById('summaryBody').innerHTML = `
@@ -391,6 +422,7 @@
 
       const latlngs = [];
       const airportsMap = new Map(); // code -> {code,name,country,city,lat,lng}
+      const flightDetails = [];
 
       // Process legs
       for (let i=0; i<airports.length-1; i++) {
@@ -436,6 +468,9 @@
               city: ta.municipality || ta.city || '', lat: ta.latitude, lng: ta.longitude
             });
           }
+
+          // Flight Details row
+          flightDetails.push({ from, to, nm, blockHrs: bHrs });
         } catch (e) {
           alert(`Error fetching ${from}-${to}: ${e.message}`);
           return;
@@ -449,10 +484,11 @@
         code, ac, acmiRate,
         totals: { totalNM, totalFlight, totalBlock, totalFuel, totalFuelCost, totalAcmi, totalNav, totalLanding, totalHandling, totalGround, grandTotal },
         airportsInfo: Array.from(airportsMap.values()),
+        flightDetails,
         warning
       };
 
-      // Render everything in selected currency
+      // Render in selected currency
       renderAll();
 
       // Draw map (only once per calc)
@@ -468,6 +504,10 @@
 
     function resetApp() {
       lastResult = null;
+
+      document.getElementById('flightDetailsBody').innerHTML = '';
+      document.getElementById('flightDetailsFoot').innerHTML = '';
+
       document.getElementById('summaryBody').innerHTML = `
         <tr><td>Aircraft Code</td><td>—</td></tr>
         <tr><td>Aircraft Model</td><td>—</td></tr>
@@ -478,6 +518,7 @@
         <tr><td>Total Fuel Burn</td><td>—</td></tr>
         <tr><td>Total Cost</td><td>—</td></tr>
         <tr><td>Warnings</td><td>—</td></tr>`;
+
       document.getElementById('costSummaryBody').innerHTML = `
         <tr><td>Fuel Cost</td><td>—</td></tr>
         <tr><td>ACMI Cost</td><td>—</td></tr>
@@ -486,11 +527,13 @@
         <tr><td>Handling Fees</td><td>—</td></tr>
         <tr><td>Ground Service Fees</td><td>—</td></tr>`;
       document.getElementById('grandTotalCell').textContent = '—';
+
       document.getElementById('analyticsBody').innerHTML = `
         <tr><td>Cost per NM</td><td>—</td></tr>
         <tr><td>Cost per Block Hour</td><td>—</td></tr>
         <tr><td>Fuel per NM</td><td>—</td></tr>
         <tr><td>Fuel per Block Hour</td><td>—</td></tr>`;
+
       document.getElementById('airportTBody').innerHTML = '';
       if (routeLayer) routeLayer.remove();
       document.getElementById('calculateBtn').classList.remove('hidden');
